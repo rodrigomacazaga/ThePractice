@@ -15,6 +15,13 @@
 [build.environment]
   NODE_VERSION = "20"
 
+# Necesario explícitamente: la autodetección del Next.js Runtime solo aplica
+# a sitios creados desde la UI con repo linkeado. Para sitios creados vía
+# API/CLI, sin esta declaración Netlify publica .next como estáticos y todas
+# las rutas SSR devuelven 404.
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
+
 # Headers de seguridad globales.
 # Nota: X-Frame-Options se define aquí y no en next.config para cubrir
 # también assets estáticos servidos por el CDN de Netlify.
