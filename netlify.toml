@@ -1,0 +1,45 @@
+# The Practice — Netlify configuration
+#
+# Netlify detecta Next.js automáticamente e instala el runtime oficial
+# (@netlify/plugin-nextjs v5+). No fijamos el adapter manualmente: la
+# recomendación actual es dejar que Netlify lo gestione. `publish = ".next"`
+# es el valor recomendado cuando se define un build command explícito.
+
+[build]
+  command = "npm run build"
+  publish = ".next"
+
+[build.environment]
+  NODE_VERSION = "20"
+
+[context.production.environment]
+  NODE_ENV = "production"
+
+[context.deploy-preview.environment]
+  NODE_ENV = "production"
+
+# Headers de seguridad globales.
+# Nota: X-Frame-Options se define aquí y no en next.config para cubrir
+# también assets estáticos servidos por el CDN de Netlify.
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "camera=(), microphone=(), geolocation=()"
+
+[[redirects]]
+  from = "/admin"
+  to = "/admin/overview"
+  status = 302
+
+[[redirects]]
+  from = "/pricing"
+  to = "/memberships"
+  status = 301
+
+[[redirects]]
+  from = "/dashboard"
+  to = "/practitioner"
+  status = 302

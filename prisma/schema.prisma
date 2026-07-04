@@ -1,0 +1,819 @@
+// ============================================================
+// The Practice — Data model
+// Multi-location, multi-role desde el día uno.
+// Dinero: SIEMPRE en centavos (Int). Créditos: Float (1.0, 1.5, 2.0).
+// ============================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ------------------------------------------------------------
+// Usuarios y roles
+// ------------------------------------------------------------
+
+enum UserRole {
+  CLIENT
+  PRACTITIONER
+  ADMIN
+  SUPER_ADMIN
+}
+
+model User {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  passwordHash String?
+  name         String
+  phone        String?
+  role         UserRole  @default(CLIENT)
+  image        String?
+  emailVerifiedAt DateTime?
+  active       Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  practitionerProfile PractitionerProfile?
+  clientProfile       ClientProfile?
+  payments            Payment[]
+  notifications       Notification[]
+  auditLogs           AuditLog[]        @relation("actor")
+  createdBookings     Booking[]         @relation("bookingCreator")
+  reviewedDocuments   Document[]        @relation("documentReviewer")
+  incidents           Incident[]        @relation("incidentReporter")
+
+  @@index([role])
+}
+
+// ------------------------------------------------------------
+// Practitioners
+// ------------------------------------------------------------
+
+enum VerificationStatus {
+  PENDING_REVIEW
+  APPROVED
+  REJECTED
+  EXPIRED
+  NEEDS_UPDATE
+}
+
+enum Modality {
+  IN_PERSON
+  ONLINE
+  HYBRID
+}
+
+enum MicrositeTier {
+  BASIC
+  PRO
+  PREMIUM
+  FEATURED
+}
+
+model PractitionerProfile {
+  id                 String             @id @default(cuid())
+  userId             String             @unique
+  user               User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  slug               String             @unique
+  headline           String? // "Psicóloga clínica · Ansiedad y burnout"
+  bio                String?
+  specialties        String[] // ["Psicología clínica", "Terapia de pareja"]
+  languages          String[]           @default(["Español"])
+  modality           Modality           @default(IN_PERSON)
+  yearsExperience    Int?
+  sessionPriceFromCents Int? // "desde $900 MXN"
+  sessionPriceToCents   Int?
+  acceptingClients   Boolean            @default(true)
+  featured           Boolean            @default(false)
+  verificationStatus VerificationStatus @default(PENDING_REVIEW)
+  photoUrl           String?
+  credentialsText    String? // cédula, formación — texto público
+  policiesText       String? // políticas de cancelación del practitioner
+  approvedAt         DateTime?
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  locations       PractitionerLocation[]
+  membership      PractitionerMembership?
+  wallet          CreditWallet?
+  bookings        Booking[]              @relation("practitionerBookings")
+  services        PractitionerService[]
+  availability    Availability[]
+  recurring       RecurringBooking[]
+  documents       Document[]
+  microsite       Microsite?
+  reviews         Review[]
+  favoritedBy     Favorite[]
+  lockers         Locker[]
+  addOns          PractitionerAddOn[]
+  packagePurchases PackagePurchase[]
+  leads           Lead[]                 @relation("practitionerLeads")
+
+  @@index([featured, verificationStatus])
+  @@index([verificationStatus])
+}
+
+model ClientProfile {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  birthYear Int?
+  notes     String?
+  createdAt DateTime @default(now())
+
+  favorites Favorite[]
+  bookings  Booking[] @relation("clientBookings")
+  reviews   Review[]
+}
+
+model Favorite {
+  clientId       String
+  practitionerId String
+  createdAt      DateTime            @default(now())
+  client         ClientProfile       @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  practitioner   PractitionerProfile @relation(fields: [practitionerId], references: [id], onDelete: Cascade)
+
+  @@id([clientId, practitionerId])
+}
+
+// ------------------------------------------------------------
+// Ubicaciones y salas
+// ------------------------------------------------------------
+
+enum LocationStatus {
+  OPEN
+  COMING_SOON
+  CLOSED
+}
+
+model Location {
+  id          String         @id @default(cuid())
+  slug        String         @unique // "la-ceiba"
+  name        String // "The Practice La Ceiba"
+  shortName   String // "La Ceiba"
+  city        String
+  state       String
+  address     String?
+  description String?
+  status      LocationStatus @default(COMING_SOON)
+  timezone    String         @default("America/Mexico_City")
+  photos      String[]
+  amenities   String[] // ["Recepción compartida", "WiFi", "Coffee station"]
+  openingHour Int            @default(7) // 7:00
+  closingHour Int            @default(22) // 22:00
+  sort        Int            @default(0)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  rooms         Room[]
+  practitioners PractitionerLocation[]
+  bookings      Booking[]
+  lockers       Locker[]
+  incidents     Incident[]
+  leads         Lead[]
+}
+
+model PractitionerLocation {
+  practitionerId String
+  locationId     String
+  practitioner   PractitionerProfile @relation(fields: [practitionerId], references: [id], onDelete: Cascade)
+  location       Location            @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  isPrimary      Boolean             @default(false)
+
+  @@id([practitionerId, locationId])
+}
+
+model RoomType {
+  id                  String  @id @default(cuid())
+  code                String  @unique // "talk" | "consult" | "premium" | "studio"
+  name                String // "Talk Room"
+  description         String?
+  creditsPerHour      Float   @default(1.0)
+  baseHourlyPriceCents Int // precio por hora sin membresía
+  memberHourlyPriceCents Int? // precio preferente con membresía
+  capacity            Int     @default(2)
+  idealFor            String[] // ["Psicología", "Coaching"]
+  features            String[] // ["2 sillones", "Luz cálida", "Alta privacidad"]
+  sort                Int     @default(0)
+  active              Boolean @default(true)
+
+  rooms Room[]
+}
+
+model Room {
+  id                String   @id @default(cuid())
+  locationId        String
+  location          Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  roomTypeId        String
+  roomType          RoomType @relation(fields: [roomTypeId], references: [id])
+  name              String // "Talk 01"
+  slug              String
+  description       String?
+  hourlyPriceCentsOverride Int? // override del precio base del tipo
+  amenities         String[]
+  photos            String[]
+  active            Boolean  @default(true)
+  createdAt         DateTime @default(now())
+
+  bookings  Booking[]
+  recurring RecurringBooking[]
+  incidents Incident[]
+
+  @@unique([locationId, slug])
+  @@index([locationId, active])
+}
+
+// ------------------------------------------------------------
+// Reservas
+// ------------------------------------------------------------
+
+enum BookingStatus {
+  PENDING_PAYMENT
+  CONFIRMED
+  CHECKED_IN
+  COMPLETED
+  CANCELLED
+  LATE_CANCELLED
+  NO_SHOW
+  REFUNDED
+  ADMIN_BLOCKED
+}
+
+enum BookingKind {
+  ROOM_RENTAL // practitioner reserva sala
+  CLIENT_SESSION // cliente reserva sesión con practitioner
+  ADMIN_BLOCK // bloqueo administrativo / mantenimiento
+}
+
+model Booking {
+  id             String        @id @default(cuid())
+  code           String        @unique // referencia corta "TP-8F3K2"
+  kind           BookingKind   @default(ROOM_RENTAL)
+  status         BookingStatus @default(CONFIRMED)
+  locationId     String
+  location       Location      @relation(fields: [locationId], references: [id])
+  roomId         String?
+  room           Room?         @relation(fields: [roomId], references: [id])
+  practitionerId String?
+  practitioner   PractitionerProfile? @relation("practitionerBookings", fields: [practitionerId], references: [id])
+  clientId       String?
+  client         ClientProfile? @relation("clientBookings", fields: [clientId], references: [id])
+  serviceId      String?
+  service        PractitionerService? @relation(fields: [serviceId], references: [id])
+  createdById    String
+  createdBy      User          @relation("bookingCreator", fields: [createdById], references: [id])
+
+  startsAt   DateTime
+  endsAt     DateTime
+  creditsUsed Float?  // si se pagó con créditos
+  priceCents  Int?    // si se pagó con dinero
+  paymentId   String?
+  payment     Payment? @relation(fields: [paymentId], references: [id])
+
+  accessCode        String? // código de acceso simulado (futuro: smart lock)
+  checkedInAt       DateTime?
+  cancelledAt       DateTime?
+  cancellationReason String?
+  notes             String?
+  recurringId       String?
+  recurring         RecurringBooking? @relation(fields: [recurringId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  creditTransactions CreditTransaction[]
+
+  // Índices críticos para detección de conflictos de horario
+  @@index([roomId, startsAt, endsAt])
+  @@index([roomId, status])
+  @@index([practitionerId, startsAt])
+  @@index([locationId, startsAt])
+  @@index([status])
+}
+
+model RecurringBooking {
+  id             String              @id @default(cuid())
+  practitionerId String
+  practitioner   PractitionerProfile @relation(fields: [practitionerId], references: [id], onDelete: Cascade)
+  roomId         String
+  room           Room                @relation(fields: [roomId], references: [id])
+  weekday        Int // 0 = domingo ... 6 = sábado
+  startHour      Int
+  endHour        Int
+  active         Boolean             @default(true)
+  until          DateTime?
+  createdAt      DateTime            @default(now())
+
+  bookings Booking[]
+}
+
+// Disponibilidad pública del practitioner (para su micrositio)
+model Availability {
+  id             String              @id @default(cuid())
+  practitionerId String
+  practitioner   PractitionerProfile @relation(fields: [practitionerId], references: [id], onDelete: Cascade)
+  weekday        Int
+  startHour      Int
+  endHour        Int
+  modality       Modality            @default(IN_PERSON)
+
+  @@index([practitionerId])
+}
+
+// ------------------------------------------------------------
+// Membresías, paquetes y créditos
+// ------------------------------------------------------------
+
+enum MembershipStatus {
+  ACTIVE
+  PAST_DUE
+  PAUSED
+  CANCELLED
+  EXPIRED
+}
+
+model MembershipPlan {
+  id                 String        @id @default(cuid())
+  code               String        @unique // "flex" | "pro" | "premium" | "resident"
+  name               String // "Pro"
+  tagline            String?
+  monthlyPriceCents  Int
+  founderPriceCents  Int? // precio especial de preventa
+  includedCredits    Float         @default(0)
+  rolloverLimit      Float         @default(0) // máximo de créditos que arrastran al siguiente mes
+  micrositeTier      MicrositeTier @default(BASIC)
+  features           String[]
+  primeAccess        Boolean       @default(false) // prioridad en horarios prime
+  premiumRoomAccess  Boolean       @default(false)
+  includesLocker     Boolean       @default(false)
+  studioHoursIncluded Float        @default(0)
+  highlighted        Boolean       @default(false) // "Most popular"
+  sort               Int           @default(0)
+  active             Boolean       @default(true)
+
+  memberships PractitionerMembership[]
+}
+
+model PractitionerMembership {
+  id                 String              @id @default(cuid())
+  practitionerId     String              @unique
+  practitioner       PractitionerProfile @relation(fields: [practitionerId], references: [id], onDelete: Cascade)
+  planId             String
+  plan               MembershipPlan      @relation(fields: [planId], references: [id])
+  status             MembershipStatus    @default(ACTIVE)
+  isFounder          Boolean             @default(false)
+  startedAt          DateTime            @default(now())
+  currentPeriodStart DateTime
+  currentPeriodEnd   DateTime
+  cancelAtPeriodEnd  Boolean             @default(false)
+  pausedAt           DateTime?
+  cancelledAt        DateTime?
+
+  creditTransactions CreditTransaction[]
+
+  @@index([status, currentPeriodEnd])
+}
+
+model CreditWallet {
+  id             String              @id @default(cuid())
+  practitionerId String              @unique
+  practitioner   PractitionerProfile @relation(fields: [practitionerId], references: [id], onDelete: Cascade)
+  balance        Float               @default(0)
+  updatedAt      DateTime            @updatedAt
+
+  transactions CreditTransaction[]
+}
+
+enum CreditTxnType {
+  PACKAGE_PURCHASE
+  MEMBERSHIP_GRANT
+  BOOKING_CONSUMPTION
+  CANCELLATION_PENALTY
+  NO_SHOW_PENALTY
+  REFUND
+  EXPIRATION
+  ROLLOVER
+  ADMIN_ADJUSTMENT
+}
+
+model CreditTransaction {
+  id           String        @id @default(cuid())
+  walletId     String
+  wallet       CreditWallet  @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  type         CreditTxnType
+  amount       Float // positivo = abono, negativo = cargo
+  balanceAfter Float
+  bookingId    String?
+  booking      Booking?      @relation(fields: [bookingId], references: [id])
+  purchaseId   String?
+  purchase     PackagePurchase? @relation(fields: [purchaseId], references: [id])
+  membershipId String?
+  membership   PractitionerMembership? @relation(fields: [membershipId], references: [id])
+  note         String?
+  expiresAt    DateTime? // para lotes de créditos con vencimiento
+  createdAt    DateTime      @default(now())
+
+  @@index([walletId, createdAt])
+  @@index([expiresAt])
+}
+
+model HourPackage {
+  id           String  @id @default(cuid())
+  code         String  @unique // "pack-10"
+  name         String // "10 horas"
+  hours        Float
+  priceCents   Int
+  validityDays Int     @default(90)
+  sort         Int     @default(0)
+  active       Boolean @default(true)
+
+  purchases PackagePurchase[]
+}
+
+model PackagePurchase {
+  id             String              @id @default(cuid())
+  practitionerId String
+  practitioner   PractitionerProfile @relation(fields: [practitionerId], references: [id])
+  packageId      String
+  package        HourPackage         @relation(fields: [packageId], references: [id])
+  paymentId      String?
+  payment        Payment?            @relation(fields: [paymentId], references: [id])
+  creditsGranted Float
+  expiresAt      DateTime?
+  createdAt      DateTime            @default(now())
+
+  creditTransactions CreditTransaction[]
+}
+
+// ------------------------------------------------------------
+// Add-ons
+// ------------------------------------------------------------
+
+enum AddOnBilling {
+  ONE_TIME
+  MONTHLY
+}
+
+model AddOn {
+  id          String       @id @default(cuid())
+  code        String       @unique
+  name        String
+  description String?
+  priceCents  Int
+  billing     AddOnBilling @default(MONTHLY)
+  sort        Int          @default(0)
+  active      Boolean      @default(true)
+
+  practitioners PractitionerAddOn[]
+}
+
+model PractitionerAddOn {
+  id             String              @id @default(cuid())
+  practitionerId String
+  practitioner   PractitionerProfile @relation(fields: [practitionerId], references: [id], onDelete: Cascade)
+  addOnId        String
+  addOn          AddOn               @relation(fields: [addOnId], references: [id])
+  active         Boolean             @default(true)
+  startedAt      DateTime            @default(now())
+  endedAt        DateTime?
+
+  @@index([practitionerId, active])
+}
+
+// ------------------------------------------------------------
+// Servicios del practitioner (lo que ofrece a clientes finales)
+// ------------------------------------------------------------
+
+model PractitionerService {
+  id             String              @id @default(cuid())
+  practitionerId String
+  practitioner   PractitionerProfile @relation(fields: [practitionerId], references: [id], onDelete: Cascade)
+  name           String // "Sesión individual"
+  description    String?
+  durationMin    Int                 @default(60)
+  priceCents     Int
+  modality       Modality            @default(IN_PERSON)
+  active         Boolean             @default(true)
+  sort           Int                 @default(0)
+
+  bookings Booking[]
+}
+
+// ------------------------------------------------------------
+// Pagos
+// ------------------------------------------------------------
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+  PARTIALLY_REFUNDED
+  CANCELLED
+}
+
+enum PaymentKind {
+  BOOKING
+  PACKAGE
+  MEMBERSHIP
+  ADDON
+  DEPOSIT // depósito de founder en preventa
+}
+
+model Payment {
+  id            String        @id @default(cuid())
+  userId        String
+  user          User          @relation(fields: [userId], references: [id])
+  provider      String // "mock" | "stripe" | "mercado_pago"
+  providerRef   String? // id de checkout/charge del proveedor
+  idempotencyKey String?      @unique
+  kind          PaymentKind
+  status        PaymentStatus @default(PENDING)
+  amountCents   Int
+  currency      String        @default("MXN")
+  refundedCents Int           @default(0)
+  couponId      String?
+  coupon        Coupon?       @relation(fields: [couponId], references: [id])
+  description   String?
+  metadata      Json?
+  paidAt        DateTime?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  bookings  Booking[]
+  purchases PackagePurchase[]
+
+  @@index([userId, status])
+  @@index([provider, providerRef])
+}
+
+model Coupon {
+  id             String    @id @default(cuid())
+  code           String    @unique
+  description    String?
+  percentOff     Int? // 0-100
+  amountOffCents Int?
+  validFrom      DateTime?
+  validUntil     DateTime?
+  maxRedemptions Int?
+  timesRedeemed  Int       @default(0)
+  active         Boolean   @default(true)
+
+  payments Payment[]
+}
+
+// Idempotencia de webhooks: un evento del proveedor se procesa una sola vez.
+model WebhookEvent {
+  id          String    @id @default(cuid())
+  provider    String
+  eventId     String
+  type        String
+  payload     Json
+  processedAt DateTime?
+  error       String?
+  createdAt   DateTime  @default(now())
+
+  @@unique([provider, eventId])
+}
+
+// ------------------------------------------------------------
+// Leads (preventa y contacto)
+// ------------------------------------------------------------
+
+enum LeadType {
+  PRACTITIONER_APPLICATION
+  CONTACT
+  CLIENT_INQUIRY
+}
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  QUALIFIED
+  CALL_SCHEDULED
+  DEPOSIT_PAID
+  CONVERTED
+  LOST
+}
+
+model Lead {
+  id              String     @id @default(cuid())
+  type            LeadType   @default(PRACTITIONER_APPLICATION)
+  status          LeadStatus @default(NEW)
+  name            String
+  email           String
+  phone           String?
+  specialty       String?
+  yearsExperience Int?
+  city            String?
+  preferredDays   String[]
+  preferredHours  String? // "Tardes 16-20h"
+  weeklySessions  Int?
+  hasClients      Boolean?
+  roomPreference  String? // "standard" | "premium" | "studio"
+  interestedPlan  String? // código del plan
+  wantsLocker     Boolean?
+  message         String?
+  source          String? // "landing-la-ceiba" | "apply" | "contact"
+  locationId      String?
+  location        Location?  @relation(fields: [locationId], references: [id])
+  practitionerId  String? // si vino de un micrositio
+  practitioner    PractitionerProfile? @relation("practitionerLeads", fields: [practitionerId], references: [id])
+  depositCents    Int?
+  adminNotes      String?
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  @@index([type, status])
+  @@index([createdAt])
+}
+
+// ------------------------------------------------------------
+// Reviews
+// ------------------------------------------------------------
+
+enum ReviewStatus {
+  PENDING
+  PUBLISHED
+  REJECTED
+}
+
+model Review {
+  id             String              @id @default(cuid())
+  practitionerId String
+  practitioner   PractitionerProfile @relation(fields: [practitionerId], references: [id], onDelete: Cascade)
+  clientId       String?
+  client         ClientProfile?      @relation(fields: [clientId], references: [id])
+  rating         Int // 1-5
+  comment        String?
+  consent        Boolean             @default(false) // consentimiento para publicar
+  status         ReviewStatus        @default(PENDING)
+  createdAt      DateTime            @default(now())
+
+  @@index([practitionerId, status])
+}
+
+// ------------------------------------------------------------
+// Documentos y verificación
+// ------------------------------------------------------------
+
+enum DocumentType {
+  ID
+  PROFESSIONAL_LICENSE // cédula profesional
+  CERTIFICATION
+  TAX_CERTIFICATE // constancia de situación fiscal
+  PROFILE_PHOTO
+  OTHER
+}
+
+model Document {
+  id             String              @id @default(cuid())
+  practitionerId String
+  practitioner   PractitionerProfile @relation(fields: [practitionerId], references: [id], onDelete: Cascade)
+  type           DocumentType
+  name           String
+  url            String
+  status         VerificationStatus  @default(PENDING_REVIEW)
+  reviewedById   String?
+  reviewedBy     User?               @relation("documentReviewer", fields: [reviewedById], references: [id])
+  reviewNotes    String?
+  expiresAt      DateTime?
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+
+  @@index([practitionerId])
+  @@index([status])
+}
+
+// ------------------------------------------------------------
+// Micrositios
+// ------------------------------------------------------------
+
+model Microsite {
+  id             String              @id @default(cuid())
+  practitionerId String              @unique
+  practitioner   PractitionerProfile @relation(fields: [practitionerId], references: [id], onDelete: Cascade)
+  tier           MicrositeTier       @default(BASIC)
+  published      Boolean             @default(false)
+  seoTitle       String?
+  seoDescription String?
+  ogImageUrl     String?
+  showPrices     Boolean             @default(true)
+  showReviews    Boolean             @default(true)
+  allowBooking   Boolean             @default(false) // reservas directas de clientes
+  allowContact   Boolean             @default(true)
+  accentTheme    String?             @default("ink") // personalización discreta
+  customSections Json?
+  updatedAt      DateTime            @updatedAt
+}
+
+// ------------------------------------------------------------
+// Lockers e incidencias
+// ------------------------------------------------------------
+
+enum LockerSize {
+  SMALL
+  LARGE
+}
+
+enum LockerStatus {
+  AVAILABLE
+  ASSIGNED
+  MAINTENANCE
+}
+
+model Locker {
+  id                String       @id @default(cuid())
+  locationId        String
+  location          Location     @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  number            String
+  size              LockerSize   @default(SMALL)
+  status            LockerStatus @default(AVAILABLE)
+  monthlyPriceCents Int
+  assignedToId      String?
+  assignedTo        PractitionerProfile? @relation(fields: [assignedToId], references: [id])
+  assignedAt        DateTime?
+
+  @@unique([locationId, number])
+}
+
+enum IncidentPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum IncidentStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+model Incident {
+  id           String           @id @default(cuid())
+  locationId   String
+  location     Location         @relation(fields: [locationId], references: [id])
+  roomId       String?
+  room         Room?            @relation(fields: [roomId], references: [id])
+  reportedById String
+  reportedBy   User             @relation("incidentReporter", fields: [reportedById], references: [id])
+  title        String
+  description  String?
+  priority     IncidentPriority @default(MEDIUM)
+  status       IncidentStatus   @default(OPEN)
+  resolvedAt   DateTime?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  @@index([locationId, status])
+}
+
+// ------------------------------------------------------------
+// Notificaciones, settings y auditoría
+// ------------------------------------------------------------
+
+model Notification {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String // "booking_confirmed" | "payment_failed" | ...
+  title     String
+  body      String?
+  data      Json?
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId, readAt])
+}
+
+// Configuración global u operativa por ubicación (key-value tipado por JSON)
+model Setting {
+  id         String  @id @default(cuid())
+  key        String
+  locationId String? // null = global
+  value      Json
+  updatedAt  DateTime @updatedAt
+
+  @@unique([key, locationId])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  actorId   String?
+  actor     User?    @relation("actor", fields: [actorId], references: [id])
+  action    String // "practitioner.approved", "booking.cancelled_by_admin"
+  entity    String
+  entityId  String?
+  data      Json?
+  createdAt DateTime @default(now())
+
+  @@index([entity, entityId])
+  @@index([createdAt])
+}
