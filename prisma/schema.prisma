@@ -6,6 +6,10 @@
 
 generator client {
   provider = "prisma-client-js"
+  // "native" para desarrollo local; rhel-openssl-3.0.x para las funciones
+  // serverless de Netlify (Amazon Linux). Sin esto, el build genera solo el
+  // engine de Ubuntu y Prisma falla al inicializar en runtime.
+  binaryTargets = ["native", "rhel-openssl-3.0.x"]
 }
 
 datasource db {
