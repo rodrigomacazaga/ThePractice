@@ -9,14 +9,11 @@
   command = "npm run build"
   publish = ".next"
 
+# OJO: no fijar NODE_ENV=production aquí — haría que npm omita las
+# devDependencies (tailwind, postcss, typescript) y el build fallaría.
+# Next.js compila en modo producción por sí mismo.
 [build.environment]
   NODE_VERSION = "20"
-
-[context.production.environment]
-  NODE_ENV = "production"
-
-[context.deploy-preview.environment]
-  NODE_ENV = "production"
 
 # Headers de seguridad globales.
 # Nota: X-Frame-Options se define aquí y no en next.config para cubrir
