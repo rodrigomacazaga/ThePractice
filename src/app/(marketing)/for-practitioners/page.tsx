@@ -136,7 +136,7 @@ export default async function ForPractitionersPage() {
               title="Elige la sala según la sesión."
               description="Cada tipo de sala consume créditos distintos. Tu membresía incluye horas que usas donde las necesites."
             />
-            <div className="mt-12 grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="mt-12 grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
               {roomTypes.map((rt) => (
                 <RoomTypeCard key={rt.id} roomType={rt} />
               ))}

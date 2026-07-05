@@ -164,6 +164,42 @@ async function main() {
     },
   });
 
+  const restoreType = await db.roomType.upsert({
+    where: { code: "restore" },
+    update: {},
+    create: {
+      code: "restore",
+      name: "Restore Room",
+      description:
+        "Para masaje, descanso y terapias corporales ligeras. Dos reposets reclinables, luz tenue regulable y privacidad total.",
+      creditsPerHour: 1.5,
+      baseHourlyPriceCents: 42000,
+      memberHourlyPriceCents: 36000,
+      capacity: 2,
+      idealFor: ["Masaje", "Relajación", "Terapia corporal"],
+      features: ["2 reposets reclinables", "Luz tenue regulable", "Cortinas acústicas", "Toallas incluidas"],
+      sort: 4,
+    },
+  });
+
+  const movementType = await db.roomType.upsert({
+    where: { code: "movement" },
+    update: {},
+    create: {
+      code: "movement",
+      name: "Movement Studio",
+      description:
+        "Para barre, yoga, pilates mat y clases de movimiento en grupos pequeños. Piso de madera, espejo de pared completa y barra de barre.",
+      creditsPerHour: 2,
+      baseHourlyPriceCents: 80000,
+      memberHourlyPriceCents: 70000,
+      capacity: 8,
+      idealFor: ["Barre", "Yoga", "Pilates", "Movimiento"],
+      features: ["Piso de madera", "Espejo de pared completa", "Barra de barre", "Tapetes incluidos"],
+      sort: 5,
+    },
+  });
+
   // ------------------------------------------------------------
   // Salas de La Ceiba
   // ------------------------------------------------------------
@@ -175,6 +211,8 @@ async function main() {
     { slug: "consult-02", name: "Consult 02", typeId: consultType.id, description: "Con pantalla para revisar planes y resultados con tu cliente." },
     { slug: "premium-01", name: "Premium 01", typeId: premiumType.id, description: "Sala amplia con sala de estar, TV y acústica reforzada.", amenities: ["TV 55”", "Sofá de 3 plazas"] },
     { slug: "studio-01", name: "Studio", typeId: studioType.id, description: "El espacio para talleres y grupos: proyector, pizarrón y mesa modular para 10.", amenities: ["Proyector", "Pizarrón", "Mesa modular"] },
+    { slug: "restore-01", name: "Restore 01", typeId: restoreType.id, description: "Dos reposets reclinables, luz tenue y silencio. Para masaje y sesiones de descanso profundo.", amenities: ["2 reposets", "Toallas", "Luz regulable"] },
+    { slug: "movement-01", name: "Movement 01", typeId: movementType.id, description: "Piso de madera cálida, espejo de pared completa y barra de barre. Para clases de movimiento en grupos pequeños.", amenities: ["Espejo completo", "Barra de barre", "Tapetes"] },
   ];
 
   const rooms: Record<string, { id: string }> = {};

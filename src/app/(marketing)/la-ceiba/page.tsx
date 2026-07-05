@@ -137,9 +137,9 @@ export default async function LaCeibaLandingPage() {
           <SectionHeading
             eyebrow="Los espacios"
             title="Las salas de La Ceiba."
-            description="Cuatro tipos de sala para terapia individual, consulta, sesiones premium y talleres grupales."
+            description="Seis tipos de sala: terapia individual, consulta, sesiones premium, masaje, movimiento y talleres grupales."
           />
-          <div className="mt-12 grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="mt-12 grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
             {roomTypes.map((rt) => (
               <RoomTypeCard key={rt.id} roomType={rt} />
             ))}

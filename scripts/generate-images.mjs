@@ -89,7 +89,35 @@ runner rug, at the end of the corridor a floor-to-ceiling window with soft dayli
 a bench with a plant beside it. Architectural depth, calm rhythm of doors, premium and
 serene — the feeling of many private practices under one roof.`,
   },
+  {
+    file: "room-restore.png",
+    prompt: `${STYLE}
+A private restorative room for massage and deep relaxation: two elegant reclining
+zero-gravity lounge chairs in warm ivory boucle upholstery, side by side at a gentle
+angle, each with a soft folded blanket in sand tone, a low oak side table between them
+with neatly rolled towels and two small ceramic bottles (no labels), dimmed warm lighting
+from a paper floor lamp, heavy acoustic curtains in warm taupe, wide oak flooring.
+On the wall: a single framed print with ONE simple horizontal arched line (minimal line
+art, one stroke only). Premium living-room serenity — NOT a spa cliché: no candles,
+no stones, no orchids, no massage table.`,
+  },
+  {
+    file: "room-movement.png",
+    prompt: `${STYLE}
+A boutique movement studio for barre and low-impact group classes: warm oak wood floor,
+one full wall covered by a large seamless mirror with a natural oak ballet barre mounted
+across it, tall windows with sheer curtains letting in soft daylight, warm linear pendant
+lights, folded sand-colored yoga mats neatly stacked on an oak shelf, a few small pilates
+props in a woven basket in the corner. Spacious, calm, premium — a boutique barre studio,
+not a gym.`,
+  },
 ];
+
+// Filtro opcional: node scripts/generate-images.mjs room-restore room-movement
+const filter = process.argv.slice(2);
+const TO_GENERATE = filter.length
+  ? IMAGES.filter((i) => filter.some((f) => i.file.includes(f)))
+  : IMAGES;
 
 async function generate(item) {
   const res = await fetch(
@@ -123,9 +151,9 @@ async function generate(item) {
 }
 
 await mkdir(OUT_DIR, { recursive: true });
-console.log(`Generando ${IMAGES.length} imágenes con ${MODEL}…\n`);
+console.log(`Generando ${TO_GENERATE.length} imágenes con ${MODEL}…\n`);
 
-for (const item of IMAGES) {
+for (const item of TO_GENERATE) {
   try {
     await generate(item);
   } catch (err) {

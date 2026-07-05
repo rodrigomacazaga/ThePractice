@@ -199,15 +199,15 @@ export default async function HomePage() {
             <div className="flex flex-wrap items-end justify-between gap-6">
               <SectionHeading
                 eyebrow="Los espacios"
-                title="Cuatro tipos de sala. Un mismo estándar."
-                description="Diseñadas para terapia, consulta, sesiones premium y talleres. Privacidad acústica, luz cálida y mobiliario de calidad en todas."
+                title="Seis tipos de sala. Un mismo estándar."
+                description="Terapia, consulta, sesiones premium, masaje, movimiento y talleres. Privacidad acústica, luz cálida y mobiliario de calidad en todas."
               />
               <ButtonLink href="/rooms" variant="outline">
                 Ver todas las salas
                 <ArrowRight className="h-4 w-4" />
               </ButtonLink>
             </div>
-            <div className="mt-12 grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="mt-12 grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
               {roomTypes.map((rt) => (
                 <RoomTypeCard key={rt.id} roomType={rt} />
               ))}

@@ -82,9 +82,9 @@ export default function HowItWorksPage() {
           <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {[
               { room: "Talk / Consult Room", rate: "1 crédito/hora" },
-              { room: "Premium Room", rate: "1.5 créditos/hora" },
+              { room: "Premium / Restore Room", rate: "1.5 créditos/hora" },
               { room: "Sala con TV/proyector", rate: "1.5 créditos/hora" },
-              { room: "Studio / Workshop", rate: "2 créditos/hora" },
+              { room: "Studio / Movement", rate: "2 créditos/hora" },
             ].map((r) => (
               <div key={r.room} className="rounded-2xl border border-paper/10 bg-paper/5 p-6">
                 <p className="text-sm text-paper/60">{r.room}</p>
