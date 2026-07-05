@@ -67,7 +67,15 @@ export function PlanCard({
             plan.highlighted ? "bg-paper/10 text-paper" : "bg-paper text-ink"
           )}
         >
-          {formatCredits(plan.includedCredits)} horas incluidas al mes
+          {formatCredits(plan.includedCredits)} créditos al mes
+          <span
+            className={cn(
+              "block font-sans text-[11px] font-normal",
+              plan.highlighted ? "text-paper/50" : "text-stone"
+            )}
+          >
+            = {formatCredits(plan.includedCredits)} h de sala estándar
+          </span>
         </p>
       )}
 

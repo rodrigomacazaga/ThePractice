@@ -167,7 +167,10 @@ export default async function LaCeibaLandingPage() {
               <Link href="/memberships" className="underline">
                 membresías regulares
               </Link>{" "}
-              para comparar.
+              para comparar ·{" "}
+              <Link href="/memberships#calculadora" className="font-semibold text-clay underline">
+                Calcula cuántas horas te da cada plan →
+              </Link>
             </p>
           </div>
         </section>

@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { SectionHeading } from "@/components/marketing/section-heading";
 import { PlanCard } from "@/components/marketing/plan-card";
 import { FaqList } from "@/components/marketing/faq";
+import { CreditCalculator } from "@/components/marketing/credit-calculator";
 
 export const dynamic = "force-dynamic";
 
@@ -83,6 +84,35 @@ export default async function MembershipsPage() {
               precios founder de por vida →
             </Link>
           </p>
+        </section>
+      )}
+
+      {/* CALCULADORA DE CRÉDITOS */}
+      {plans.length > 0 && roomTypes.length > 0 && (
+        <section id="calculadora" className="scroll-mt-20 border-t border-line bg-paper-deep/40 py-20">
+          <div className="container-page">
+            <SectionHeading
+              eyebrow="La calculadora"
+              title="Tus créditos, traducidos a horas."
+              description="Cada membresía carga créditos a tu cuenta. Una hora de sala estándar consume 1 crédito; los espacios más grandes consumen más. Calcula cuánto te rinde cada plan."
+              align="center"
+            />
+            <div className="mx-auto mt-10 max-w-4xl">
+              <CreditCalculator
+                plans={plans.map((p) => ({
+                  code: p.code,
+                  name: p.name,
+                  credits: p.includedCredits,
+                  highlighted: p.highlighted,
+                }))}
+                roomTypes={roomTypes.map((rt) => ({
+                  code: rt.code,
+                  name: rt.name,
+                  creditsPerHour: rt.creditsPerHour,
+                }))}
+              />
+            </div>
+          </div>
         </section>
       )}
 
