@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Lock } from "lucide-react";
 import { db } from "@/lib/db";
 import { safeQuery } from "@/lib/safe-query";
 import { formatMXN, formatCredits } from "@/lib/utils";
@@ -40,6 +40,10 @@ const PRICING_FAQ = [
     q: "¿Hay permanencia mínima?",
     a: "No. Las membresías son mensuales y puedes cancelar al final de cualquier periodo. Los precios founder requieren mantener la membresía activa para conservarse.",
   },
+  {
+    q: "¿Las membresías incluyen locker?",
+    a: "Sí. Toda membresía activa incluye un locker personal sin costo adicional para guardar tu material entre sesiones. Se asigna en tu ubicación principal y está sujeto a disponibilidad; el plan Resident incluye locker grande garantizado.",
+  },
 ];
 
 export default async function MembershipsPage() {
@@ -78,6 +82,22 @@ export default async function MembershipsPage() {
               <PlanCard key={plan.id} plan={plan} />
             ))}
           </div>
+          {/* LOCKER INCLUIDO */}
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-4 rounded-2xl bg-ink px-8 py-6 text-paper">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-clay">
+              <Lock className="h-5 w-5" strokeWidth={1.75} />
+            </div>
+            <div className="max-w-xl text-center sm:text-left">
+              <p className="font-display text-base font-bold">
+                Locker incluido en toda membresía
+              </p>
+              <p className="mt-0.5 text-sm text-paper/60">
+                Guarda tu material entre sesiones sin costo adicional. Se asigna
+                en tu ubicación principal, sujeto a disponibilidad.
+              </p>
+            </div>
+          </div>
+
           <p className="mt-8 text-center text-sm text-stone-deep">
             Practitioners fundadores de La Ceiba:{" "}
             <Link href="/la-ceiba" className="font-semibold text-clay hover:underline">

@@ -113,7 +113,7 @@ export default async function ForPractitionersPage() {
             { icon: CalendarClock, title: "Reserva flexible", text: "Por hora, en bloques o con horarios recurrentes garantizados según tu plan." },
             { icon: Globe2, title: "Presencia digital", text: "Micrositio propio con SEO, perfil en el directorio y herramientas para compartir tu agenda." },
             { icon: Wallet, title: "Cobros online", text: "Tus clientes pagan al reservar. Confirmaciones y recordatorios automáticos reducen no-shows." },
-            { icon: Lock, title: "Lockers y add-ons", text: "Guarda tu material en un locker privado. TV, proyector y kit de taller cuando los necesites." },
+            { icon: Lock, title: "Locker incluido", text: "Toda membresía incluye un locker para tu material, sin costo adicional. TV, proyector y kit de taller como add-ons cuando los necesites." },
             { icon: Landmark, title: "Facturación", text: "Recibos y facturas de tus pagos a The Practice, listos para tu contabilidad." },
           ].map((f) => (
             <div key={f.title} className="rounded-2xl border border-line bg-surface p-7 shadow-(--shadow-card)">

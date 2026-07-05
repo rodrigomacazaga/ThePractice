@@ -244,11 +244,12 @@ async function main() {
       includedCredits: 2,
       rolloverLimit: 2,
       micrositeTier: "BASIC" as const,
+      includesLocker: true,
       features: [
         "2 horas de sala incluidas",
         "Perfil básico en directorio",
         "Precio preferente por hora",
-        "Reserva desde tu panel",
+        "Locker incluido sin costo",
         "Facturación de tus pagos",
         "Acceso a la comunidad",
       ],
@@ -264,11 +265,13 @@ async function main() {
       rolloverLimit: 6,
       micrositeTier: "PRO" as const,
       highlighted: true,
+      includesLocker: true,
       features: [
         "22 horas de sala al mes",
         "Micrositio completo con reservas",
         "Cobros online de clientes",
         "Recordatorios automáticos",
+        "Locker incluido sin costo",
         "Precio preferente en horas extra",
         "Soporte prioritario",
       ],
@@ -285,11 +288,13 @@ async function main() {
       micrositeTier: "PREMIUM" as const,
       primeAccess: true,
       premiumRoomAccess: true,
+      includesLocker: true,
       features: [
         "45 horas de sala al mes",
         "Perfil destacado en directorio",
         "Prioridad en horarios prime",
         "Acceso a Premium Room",
+        "Locker incluido sin costo",
         "Reporte mensual de leads",
         "Horarios recurrentes",
         "Descuento en horas adicionales",
@@ -312,7 +317,7 @@ async function main() {
       features: [
         "90 horas de sala al mes",
         "Horarios fijos garantizados",
-        "Locker privado incluido",
+        "Locker privado grande incluido",
         "4 horas de Studio al mes",
         "Micrositio destacado",
         "Leads prioritarios",
@@ -326,7 +331,9 @@ async function main() {
   for (const p of plansData) {
     plans[p.code] = await db.membershipPlan.upsert({
       where: { code: p.code },
-      update: {},
+      // features e includesLocker se sincronizan con el seed en cada corrida;
+      // los precios NO se tocan aquí para respetar ediciones desde admin.
+      update: { features: p.features, includesLocker: true },
       create: p,
     });
   }
@@ -352,8 +359,11 @@ async function main() {
   // Add-ons
   // ------------------------------------------------------------
   const addOnsData = [
-    { code: "locker-small", name: "Locker chico", description: "Guarda tu material entre sesiones.", priceCents: 39000, billing: "MONTHLY" as const, sort: 0 },
-    { code: "locker-large", name: "Locker grande", description: "Para equipo voluminoso.", priceCents: 59000, billing: "MONTHLY" as const, sort: 1 },
+    // Lockers: incluidos sin costo en toda membresía (decisión 2026-07-04).
+    // Se conservan en el catálogo desactivados por si se quieren reactivar
+    // como add-on para usuarios sin membresía.
+    { code: "locker-small", name: "Locker chico", description: "Guarda tu material entre sesiones.", priceCents: 39000, billing: "MONTHLY" as const, sort: 0, active: false },
+    { code: "locker-large", name: "Locker grande", description: "Para equipo voluminoso.", priceCents: 59000, billing: "MONTHLY" as const, sort: 1, active: false },
     { code: "tv-use", name: "Uso de TV", description: "Por sesión, en salas compatibles.", priceCents: 8000, billing: "ONE_TIME" as const, sort: 2 },
     { code: "projector", name: "Proyector", description: "Por sesión, en Studio.", priceCents: 12000, billing: "ONE_TIME" as const, sort: 3 },
     { code: "workshop-kit", name: "Kit de taller", description: "Rotafolio, plumones y material.", priceCents: 15000, billing: "ONE_TIME" as const, sort: 4 },
@@ -364,6 +374,11 @@ async function main() {
   for (const addon of addOnsData) {
     await db.addOn.upsert({ where: { code: addon.code }, update: {}, create: addon });
   }
+  // Sincroniza la desactivación de lockers como add-on de pago en DBs existentes
+  await db.addOn.updateMany({
+    where: { code: { in: ["locker-small", "locker-large"] } },
+    data: { active: false },
+  });
 
   // ------------------------------------------------------------
   // Usuarios: admins

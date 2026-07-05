@@ -32,6 +32,10 @@ const SECTIONS: { title: string; items: { q: string; a: string }[] }[] = [
         q: "¿Puedo facturar mis pagos a The Practice?",
         a: "Sí. Emitimos comprobantes de tus membresías, paquetes y horas para tu contabilidad.",
       },
+      {
+        q: "¿Las membresías incluyen locker?",
+        a: "Sí. Toda membresía activa incluye un locker personal sin costo adicional, asignado en tu ubicación principal y sujeto a disponibilidad. El plan Resident garantiza locker grande.",
+      },
     ],
   },
   {
