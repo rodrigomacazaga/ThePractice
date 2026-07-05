@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, CalendarClock, Crown, Globe, MapPin, Sparkles } from "lucide-react";
 import { db } from "@/lib/db";
@@ -10,7 +11,6 @@ import { PlanCard } from "@/components/marketing/plan-card";
 import { RoomTypeCard } from "@/components/marketing/room-type-card";
 import { FaqList } from "@/components/marketing/faq";
 import { ApplyForm } from "@/components/marketing/apply-form";
-import { FloorPlanArt } from "@/components/marketing/floor-plan-art";
 
 export const dynamic = "force-dynamic";
 
@@ -95,10 +95,19 @@ export default async function LaCeibaLandingPage() {
               Aplicación gratuita · Sin compromiso · Cupo limitado por especialidad
             </p>
           </div>
-          <div className="rounded-2xl bg-paper/[0.03] p-8">
-            <FloorPlanArt className="[&_rect]:!stroke-paper/25 [&_circle]:!stroke-paper/25" />
+          <div>
+            <div className="relative aspect-[3/2] overflow-hidden rounded-2xl shadow-(--shadow-lift)">
+              <Image
+                src="/images/hero-space.jpg"
+                alt="Corredor de salas privadas en The Practice La Ceiba"
+                fill
+                priority
+                sizes="(max-width: 1024px) 100vw, 45vw"
+                className="object-cover"
+              />
+            </div>
             <p className="mt-4 text-center font-display text-[10px] font-semibold tracking-[0.25em] text-paper/40 uppercase">
-              The Practice La Ceiba · Planta arquitectónica
+              The Practice La Ceiba · Salas privadas
             </p>
           </div>
         </div>

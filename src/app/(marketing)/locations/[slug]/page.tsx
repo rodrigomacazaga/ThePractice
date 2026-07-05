@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import { notFound } from "next/navigation";
 import { ArrowRight, Clock, MapPin } from "lucide-react";
 import { db } from "@/lib/db";
@@ -8,7 +9,6 @@ import { Badge } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
 import { SectionHeading } from "@/components/marketing/section-heading";
 import { PractitionerCard } from "@/components/marketing/practitioner-card";
-import { FloorPlanArt } from "@/components/marketing/floor-plan-art";
 
 export const dynamic = "force-dynamic";
 
@@ -108,8 +108,15 @@ export default async function LocationDetailPage({ params }: Props) {
               </ButtonLink>
             </div>
           </div>
-          <div className="rounded-2xl bg-paper/[0.03] p-8">
-            <FloorPlanArt className="[&_rect]:!stroke-paper/30 [&_circle]:!stroke-paper/30" />
+          <div className="relative aspect-[3/2] overflow-hidden rounded-2xl shadow-(--shadow-lift)">
+            <Image
+              src="/images/common-area.jpg"
+              alt={`Área común de ${location.name}`}
+              fill
+              priority
+              sizes="(max-width: 1024px) 100vw, 45vw"
+              className="object-cover"
+            />
           </div>
         </div>
       </section>

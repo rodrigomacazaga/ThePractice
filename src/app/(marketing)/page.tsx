@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -285,18 +286,27 @@ export default async function HomePage() {
               </ButtonLink>
             </div>
           </div>
-          <div className="grid gap-4 sm:grid-cols-2">
-            {[
-              { title: "Profesionales verificados", text: "Revisamos credenciales y cédulas antes de publicar un perfil." },
-              { title: "Espacios privados", text: "Salas diseñadas para conversaciones que importan." },
-              { title: "Reserva en 60 segundos", text: "Elige horario, paga online y recibe tu confirmación." },
-              { title: "Sin letra chica", text: "Precios claros y políticas de cancelación visibles." },
-            ].map((item) => (
-              <div key={item.title} className="rounded-2xl border border-line bg-paper p-6">
-                <h3 className="font-display text-sm font-bold">{item.title}</h3>
-                <p className="mt-1.5 text-sm leading-relaxed text-stone-deep">{item.text}</p>
-              </div>
-            ))}
+          <div>
+            <div className="relative aspect-[3/2] overflow-hidden rounded-2xl shadow-(--shadow-lift)">
+              <Image
+                src="/images/common-area.jpg"
+                alt="Área común de The Practice: recepción, lounge y coffee station"
+                fill
+                sizes="(max-width: 1024px) 100vw, 45vw"
+                className="object-cover"
+              />
+            </div>
+            <div className="mt-4 grid gap-4 sm:grid-cols-2">
+              {[
+                { title: "Profesionales verificados", text: "Credenciales revisadas antes de publicar un perfil." },
+                { title: "Espacios privados", text: "Salas diseñadas para conversaciones que importan." },
+              ].map((item) => (
+                <div key={item.title} className="rounded-2xl border border-line bg-paper p-6">
+                  <h3 className="font-display text-sm font-bold">{item.title}</h3>
+                  <p className="mt-1.5 text-sm leading-relaxed text-stone-deep">{item.text}</p>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </section>

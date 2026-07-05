@@ -1,19 +1,38 @@
+import Image from "next/image";
 import type { RoomType } from "@prisma/client";
 import { Users } from "lucide-react";
 import { formatMXN, formatCredits } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 
+/** Fotos por tipo de sala (generadas con dirección de arte de la marca). */
+const ROOM_PHOTOS: Record<string, string> = {
+  talk: "/images/room-talk.jpg",
+  consult: "/images/room-consult.jpg",
+  premium: "/images/room-premium.jpg",
+  studio: "/images/room-studio.jpg",
+};
+
 /**
- * Card de tipo de sala. El "visual" es una miniatura arquitectónica
- * abstracta (plano de la sala) dibujada en SVG — sin fotos de stock,
- * consistente con la marca.
+ * Card de tipo de sala: foto del espacio con overlay del costo en créditos.
+ * Si un tipo nuevo no tiene foto aún, cae al plano arquitectónico SVG.
  */
 export function RoomTypeCard({ roomType }: { roomType: RoomType }) {
+  const photo = ROOM_PHOTOS[roomType.code];
   return (
     <div className="group flex flex-col overflow-hidden rounded-2xl border border-line bg-surface shadow-(--shadow-card) transition-shadow hover:shadow-(--shadow-lift)">
-      <div className="relative flex h-44 items-center justify-center bg-ink">
-        <RoomPlan code={roomType.code} />
-        <Badge variant="clay" className="absolute top-4 right-4">
+      <div className="relative flex h-44 items-center justify-center overflow-hidden bg-ink">
+        {photo ? (
+          <Image
+            src={photo}
+            alt={`${roomType.name} en The Practice`}
+            fill
+            sizes="(max-width: 640px) 100vw, (max-width: 1280px) 50vw, 25vw"
+            className="object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+          />
+        ) : (
+          <RoomPlan code={roomType.code} />
+        )}
+        <Badge variant="clay" className="absolute top-4 right-4 z-10">
           {formatCredits(roomType.creditsPerHour)}{" "}
           {roomType.creditsPerHour === 1 ? "crédito" : "créditos"}/hora
         </Badge>
