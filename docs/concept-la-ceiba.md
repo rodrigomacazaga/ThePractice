@@ -19,8 +19,7 @@ atender a sus clientes por cita. Reúne en un mismo local diversas salas
 equipadas, administradas de forma centralizada, con reservas, control de
 acceso, limpieza, mantenimiento y estándares de uso.
 
-Sirve a profesionales independientes verificados —psicólogos, terapeutas,
-nutriólogos, coaches y consultores, entre otros— que hoy atienden por cuenta
+Sirve a profesionales independientes verificados que hoy atienden por cuenta
 propia y buscan un espacio digno, privado y bien ubicado, sin comprometerse con
 la renta y la operación de un local completo.
 
@@ -34,8 +33,9 @@ The Practice concentra en un solo local varios espacios privados, diseñados par
 distintos tipos de sesiones profesionales. Cada profesional reserva el espacio
 que necesita para atender a sus clientes por cita, sin instalar su propia
 infraestructura ni rentar un local independiente. El uso es siempre por
-reservación y por parte de usuarios autorizados. No contempla procedimientos
-médicos invasivos ni actividades clínicas complejas.
+reservación y por parte de usuarios autorizados. No es un comercio con venta
+abierta al público, sino un entorno de atención profesional, privado y
+programado.
 
 ## Cómo opera
 

@@ -142,11 +142,10 @@ export default function ConceptLaCeibaPage() {
               mantenimiento y estándares de uso.
             </p>
             <p>
-              Sirve a profesionales independientes verificados —psicólogos,
-              terapeutas, nutriólogos, coaches y consultores, entre otros— que
-              hoy atienden por cuenta propia y buscan un espacio digno, privado
-              y bien ubicado, sin comprometerse con la renta y la operación de
-              un local completo.
+              Sirve a profesionales independientes verificados que hoy atienden
+              por cuenta propia y buscan un espacio digno, privado y bien
+              ubicado, sin comprometerse con la renta y la operación de un local
+              completo.
             </p>
             <p>
               Para La Ceiba, esto representa un operador único y profesional, una
@@ -175,28 +174,6 @@ export default function ConceptLaCeibaPage() {
               El uso es siempre por reservación y por parte de usuarios
               autorizados. No es un comercio con venta abierta al público, sino
               un entorno de atención profesional, privado y programado.
-            </p>
-          </div>
-
-          <div className="mt-8 rounded-2xl border border-line bg-surface p-6 sm:p-7">
-            <p className="eyebrow">Perfil de usuarios</p>
-            <div className="mt-4 grid gap-x-8 gap-y-2.5 sm:grid-cols-2">
-              {[
-                "Psicólogos y terapeutas",
-                "Nutriólogos",
-                "Coaches y consultores",
-                "Especialistas de bienestar no invasivo",
-                "Otros profesionales independientes compatibles",
-              ].map((u) => (
-                <div key={u} className="flex items-start gap-2.5 text-sm text-ink-mute">
-                  <Marker />
-                  {u}
-                </div>
-              ))}
-            </div>
-            <p className="mt-5 text-xs leading-relaxed text-stone">
-              El concepto no contempla procedimientos médicos invasivos ni
-              actividades clínicas complejas.
             </p>
           </div>
         </section>
