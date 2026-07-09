@@ -95,14 +95,10 @@ function DocImage({ src, alt, caption }: { src: string; alt: string; caption: st
   );
 }
 
-/**
- * Encabezado de sección. El espacio superior va como PADDING (no margin) para
- * que no se colapse cuando la sección cae al inicio de una página impresa:
- * así el título siempre conserva aire arriba en el PDF.
- */
+/** Encabezado de sección que no se separa de su contenido inmediato. */
 function SectionHead({ eyebrow, title }: { eyebrow: string; title: string }) {
   return (
-    <div className="break-inside-avoid pt-16">
+    <div className="break-inside-avoid">
       <p className="eyebrow">{eyebrow}</p>
       <h2 className="mt-3 font-display text-2xl font-bold tracking-tight sm:text-3xl">{title}</h2>
     </div>
@@ -160,7 +156,7 @@ export default function ConceptLaCeibaPage() {
         </section>
 
         {/* ============ 01 · RESUMEN EJECUTIVO ============ */}
-        <section>
+        <section className="mt-16">
           <SectionHead eyebrow="01 · Resumen ejecutivo" title="Un concepto profesional, ordenado y de bajo impacto." />
           <div className="mt-6 max-w-2xl space-y-4 text-[15px] leading-relaxed text-ink-mute">
             <p>
@@ -187,7 +183,7 @@ export default function ConceptLaCeibaPage() {
         </section>
 
         {/* ============ 02 · EL CONCEPTO ============ */}
-        <section>
+        <section className="mt-16">
           <SectionHead eyebrow="02 · El concepto" title="Varios espacios privados, un solo local administrado." />
           <div className="mt-6 max-w-2xl space-y-4 text-[15px] leading-relaxed text-ink-mute">
             <p>
@@ -206,7 +202,7 @@ export default function ConceptLaCeibaPage() {
         </section>
 
         {/* ============ 03 · CÓMO OPERA ============ */}
-        <section>
+        <section className="mt-16">
           <SectionHead eyebrow="03 · Cómo opera" title="Una operación previsible y discreta." />
           <p className="mt-4 max-w-2xl text-[15px] leading-relaxed text-ink-mute">
             La operación está diseñada para ser ordenada, silenciosa y
@@ -223,7 +219,7 @@ export default function ConceptLaCeibaPage() {
         </section>
 
         {/* ============ 04 · TIPOS DE ESPACIOS ============ */}
-        <section>
+        <section className="mt-16">
           <SectionHead eyebrow="04 · Tipos de espacios" title="Espacios equipados para distintas formas de atender." />
           <ul className="mt-8 max-w-2xl space-y-3.5">
             {ESPACIOS.map((e) => (
@@ -247,7 +243,7 @@ export default function ConceptLaCeibaPage() {
         </section>
 
         {/* ============ 05 · THE MEMBERS LOUNGE ============ */}
-        <section>
+        <section className="mt-16">
           <SectionHead eyebrow="05 · Amenidad distintiva" title="The Members Lounge, en La Ceiba." />
           <div className="mt-8">
             <DocImage
@@ -275,7 +271,7 @@ export default function ConceptLaCeibaPage() {
         </section>
 
         {/* ============ 06 · COMPATIBILIDAD ============ */}
-        <section>
+        <section className="mt-16">
           <SectionHead eyebrow="06 · Compatibilidad con Plaza La Ceiba" title="Un uso que suma a una plaza premium." />
           <ul className="mt-8 grid gap-x-10 gap-y-3.5 sm:grid-cols-2">
             {COMPATIBILIDAD.map((c) => (
@@ -288,7 +284,7 @@ export default function ConceptLaCeibaPage() {
         </section>
 
         {/* ============ 07 · PERFIL DEL USUARIO ============ */}
-        <section>
+        <section className="mt-16">
           <SectionHead eyebrow="07 · Perfil del usuario" title="Público profesional y programado." />
           <p className="mt-4 max-w-2xl text-[15px] leading-relaxed text-ink-mute">
             El público de The Practice es profesional y acude con cita, en un
@@ -305,7 +301,7 @@ export default function ConceptLaCeibaPage() {
         </section>
 
         {/* ============ 08 · ESTÁNDARES DE OPERACIÓN ============ */}
-        <section>
+        <section className="mt-16">
           <SectionHead eyebrow="08 · Estándares de operación" title="Compromisos con el inmueble y la plaza." />
           <ul className="mt-8 grid gap-x-10 gap-y-3.5 sm:grid-cols-2">
             {ESTANDARES.map((e) => (
@@ -318,7 +314,7 @@ export default function ConceptLaCeibaPage() {
         </section>
 
         {/* ============ 09 · BENEFICIO PARA LA PLAZA ============ */}
-        <section>
+        <section className="mt-16">
           <SectionHead eyebrow="09 · Beneficio para la propiedad" title="Desde la perspectiva del inmueble." />
           <div className="mt-8 grid gap-4 sm:grid-cols-2">
             {BENEFICIOS.map((b) => (

@@ -171,11 +171,13 @@
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
+  /* Margen superior generoso: cualquier elemento que caiga al inicio de una
+     página (título, tarjeta o imagen) conserva aire arriba de forma uniforme. */
   @page {
-    margin: 14mm;
+    margin: 20mm 16mm 16mm;
   }
   /* Evita cortes feos: los títulos no se quedan solos al final de página y las
-     imágenes no se parten entre hojas. */
+     imágenes/tarjetas no se parten entre hojas. */
   h1,
   h2,
   h3 {
