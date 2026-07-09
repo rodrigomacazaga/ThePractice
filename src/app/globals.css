@@ -159,3 +159,19 @@
   text-transform: uppercase;
   color: var(--color-stone);
 }
+
+/* ============================================================
+   Impresión — para documentos exportables a PDF (ej. /concept-la-ceiba).
+   Asegura que fondos e imágenes se impriman y define márgenes limpios.
+   ============================================================ */
+@media print {
+  *,
+  *::before,
+  *::after {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  @page {
+    margin: 14mm;
+  }
+}
