@@ -176,7 +176,16 @@
   @page {
     margin: 20mm 16mm 16mm;
   }
-  /* Evita cortes feos: los títulos no se quedan solos al final de página y las
+  /* Cada sección viaja como un bloque coherente: su encabezado, texto, viñetas
+     y foto no se separan entre páginas. Esto evita que una foto quede huérfana
+     —sola al inicio de una hoja, lejos de su título— como pasaba con la sección
+     04. Las 9 secciones caben dentro de una página A4, así que ninguna se parte
+     por ser demasiado alta; si en el futuro alguna creciera de más, el navegador
+     la fragmenta igual (nunca se recorta contenido). */
+  main > section {
+    break-inside: avoid;
+  }
+  /* Refuerzo: los títulos no se quedan solos al final de página y las
      imágenes/tarjetas no se parten entre hojas. */
   h1,
   h2,
