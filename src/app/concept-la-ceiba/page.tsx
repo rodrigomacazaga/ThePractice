@@ -11,13 +11,14 @@ export const metadata: Metadata = {
   title: "The Practice La Ceiba — Concepto",
   description: DOC_DESCRIPTION,
   robots: { index: false, follow: false },
-  // Sobreescribe la descripción del sitio (que menciona giros) para que el
-  // Open Graph/Twitter de este documento sea neutral, no solo el contenido visible.
+  // Sobreescribe la descripción del sitio para que el Open Graph/Twitter de
+  // este documento sea neutral, no solo el contenido visible.
   openGraph: { title: "The Practice La Ceiba — Concepto", description: DOC_DESCRIPTION },
   twitter: { title: "The Practice La Ceiba — Concepto", description: DOC_DESCRIPTION },
 };
 
-// Contenido estructural del documento (institucional, sin información comercial).
+// Contenido estructural del documento (institucional, sin información comercial
+// ni menciones de giros específicos).
 const OPERACION = [
   { title: "Acceso bajo reservación", text: "Cada uso se agenda previamente; no hay entrada libre al público." },
   { title: "Usuarios autorizados", text: "Únicamente profesionales verificados y sus clientes con cita." },
@@ -74,9 +75,39 @@ function Marker() {
   return <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-clay" />;
 }
 
+/** Imagen de documento en flujo normal (no `fill`) para impresión fiable. */
+function DocImage({ src, alt, caption }: { src: string; alt: string; caption: string }) {
+  return (
+    <figure className="break-inside-avoid">
+      <Image
+        src={src}
+        alt={alt}
+        width={1248}
+        height={832}
+        priority
+        sizes="(max-width: 896px) 100vw, 896px"
+        className="h-auto w-full rounded-2xl border border-line"
+      />
+      <figcaption className="mt-3 font-display text-[10px] font-semibold tracking-[0.2em] text-stone uppercase">
+        {caption}
+      </figcaption>
+    </figure>
+  );
+}
+
+/** Encabezado de sección que no se separa de su contenido inmediato. */
+function SectionHead({ eyebrow, title }: { eyebrow: string; title: string }) {
+  return (
+    <div className="break-inside-avoid">
+      <p className="eyebrow">{eyebrow}</p>
+      <h2 className="mt-3 font-display text-2xl font-bold tracking-tight sm:text-3xl">{title}</h2>
+    </div>
+  );
+}
+
 export default function ConceptLaCeibaPage() {
   return (
-    <div className="min-h-dvh bg-paper">
+    <div className="bg-paper">
       {/* Barra utilitaria — solo pantalla */}
       <div className="border-b border-line bg-surface print:hidden">
         <div className="mx-auto flex max-w-4xl items-center justify-between px-6 py-4 sm:px-10">
@@ -90,13 +121,13 @@ export default function ConceptLaCeibaPage() {
 
       <main className="mx-auto max-w-4xl px-6 py-14 sm:px-10 sm:py-16">
         {/* ============ PORTADA ============ */}
-        <section className="break-after-page">
+        <section>
           <div className="flex items-center gap-2.5">
             <LogoMark />
             <Wordmark withTagline />
           </div>
 
-          <div className="mt-16">
+          <div className="mt-14 break-inside-avoid">
             <p className="eyebrow">Documento de concepto · Proceso de arrendamiento</p>
             <h1 className="mt-4 font-display text-4xl font-bold tracking-tight text-balance sm:text-6xl">
               The Practice La Ceiba
@@ -111,33 +142,22 @@ export default function ConceptLaCeibaPage() {
             </p>
           </div>
 
-          <figure className="mt-12 break-inside-avoid">
-            <div className="relative aspect-[16/9] overflow-hidden rounded-2xl border border-line">
-              <Image
-                src="/images/room-premium.jpg"
-                alt="Interiores de referencia de The Practice"
-                fill
-                priority
-                sizes="(max-width: 896px) 100vw, 896px"
-                className="object-cover"
-              />
-            </div>
-            <figcaption className="mt-3 font-display text-[10px] font-semibold tracking-[0.2em] text-stone uppercase">
-              Interiores de referencia · The Practice
-            </figcaption>
-          </figure>
+          <div className="mt-10">
+            <DocImage
+              src="/images/room-premium.jpg"
+              alt="Interiores de referencia de The Practice"
+              caption="Interiores de referencia · The Practice"
+            />
+          </div>
 
-          <p className="mt-12 text-sm text-stone-deep">
+          <p className="mt-10 text-sm text-stone-deep">
             Preparado para la propiedad y administración de Plaza La Ceiba.
           </p>
         </section>
 
         {/* ============ 01 · RESUMEN EJECUTIVO ============ */}
-        <section className="mt-4 break-inside-avoid">
-          <p className="eyebrow">01 · Resumen ejecutivo</p>
-          <h2 className="mt-3 font-display text-2xl font-bold tracking-tight sm:text-3xl">
-            Un concepto profesional, ordenado y de bajo impacto.
-          </h2>
+        <section className="mt-16">
+          <SectionHead eyebrow="01 · Resumen ejecutivo" title="Un concepto profesional, ordenado y de bajo impacto." />
           <div className="mt-6 max-w-2xl space-y-4 text-[15px] leading-relaxed text-ink-mute">
             <p>
               The Practice es un concepto de espacios profesionales privados,
@@ -163,11 +183,8 @@ export default function ConceptLaCeibaPage() {
         </section>
 
         {/* ============ 02 · EL CONCEPTO ============ */}
-        <section className="mt-16 break-inside-avoid">
-          <p className="eyebrow">02 · El concepto</p>
-          <h2 className="mt-3 font-display text-2xl font-bold tracking-tight sm:text-3xl">
-            Varios espacios privados, un solo local administrado.
-          </h2>
+        <section className="mt-16">
+          <SectionHead eyebrow="02 · El concepto" title="Varios espacios privados, un solo local administrado." />
           <div className="mt-6 max-w-2xl space-y-4 text-[15px] leading-relaxed text-ink-mute">
             <p>
               The Practice concentra en un solo local varios espacios privados,
@@ -185,21 +202,15 @@ export default function ConceptLaCeibaPage() {
         </section>
 
         {/* ============ 03 · CÓMO OPERA ============ */}
-        <section className="mt-16 break-before-page">
-          <p className="eyebrow">03 · Cómo opera</p>
-          <h2 className="mt-3 font-display text-2xl font-bold tracking-tight sm:text-3xl">
-            Una operación previsible y discreta.
-          </h2>
+        <section className="mt-16">
+          <SectionHead eyebrow="03 · Cómo opera" title="Una operación previsible y discreta." />
           <p className="mt-4 max-w-2xl text-[15px] leading-relaxed text-ink-mute">
             La operación está diseñada para ser ordenada, silenciosa y
             compatible con la vida cotidiana de la plaza.
           </p>
-          <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="mt-8 grid gap-4 sm:grid-cols-2">
             {OPERACION.map((o) => (
-              <div
-                key={o.title}
-                className="break-inside-avoid rounded-2xl border border-line bg-surface p-6"
-              >
+              <div key={o.title} className="break-inside-avoid rounded-2xl border border-line bg-surface p-6">
                 <h3 className="font-display text-sm font-bold">{o.title}</h3>
                 <p className="mt-1.5 text-sm leading-relaxed text-stone-deep">{o.text}</p>
               </div>
@@ -208,34 +219,22 @@ export default function ConceptLaCeibaPage() {
         </section>
 
         {/* ============ 04 · TIPOS DE ESPACIOS ============ */}
-        <section className="mt-16 break-inside-avoid">
-          <p className="eyebrow">04 · Tipos de espacios</p>
-          <h2 className="mt-3 font-display text-2xl font-bold tracking-tight sm:text-3xl">
-            Espacios equipados para distintas formas de atender.
-          </h2>
-          <div className="mt-8 grid items-start gap-10 lg:grid-cols-2">
-            <ul className="space-y-3.5">
-              {ESPACIOS.map((e) => (
-                <li key={e} className="flex items-start gap-3 text-[15px] leading-relaxed text-ink-mute">
-                  <Marker />
-                  {e}
-                </li>
-              ))}
-            </ul>
-            <figure className="break-inside-avoid">
-              <div className="relative aspect-[3/2] overflow-hidden rounded-2xl border border-line">
-                <Image
-                  src="/images/common-area.jpg"
-                  alt="Área común y recepción de referencia"
-                  fill
-                  sizes="(max-width: 1024px) 100vw, 440px"
-                  className="object-cover"
-                />
-              </div>
-              <figcaption className="mt-3 font-display text-[10px] font-semibold tracking-[0.2em] text-stone uppercase">
-                Área común y recepción · referencia
-              </figcaption>
-            </figure>
+        <section className="mt-16">
+          <SectionHead eyebrow="04 · Tipos de espacios" title="Espacios equipados para distintas formas de atender." />
+          <ul className="mt-8 max-w-2xl space-y-3.5">
+            {ESPACIOS.map((e) => (
+              <li key={e} className="flex items-start gap-3 text-[15px] leading-relaxed text-ink-mute">
+                <Marker />
+                {e}
+              </li>
+            ))}
+          </ul>
+          <div className="mt-8">
+            <DocImage
+              src="/images/common-area.jpg"
+              alt="Área común y recepción de referencia"
+              caption="Área común y recepción · referencia"
+            />
           </div>
           <p className="mt-6 max-w-2xl text-xs leading-relaxed text-stone">
             Todos los espacios son privados y de uso por reservación. El número y
@@ -244,53 +243,36 @@ export default function ConceptLaCeibaPage() {
         </section>
 
         {/* ============ 05 · THE MEMBERS LOUNGE ============ */}
-        <section className="mt-16 break-before-page">
-          <p className="eyebrow">05 · Amenidad distintiva</p>
-          <h2 className="mt-3 font-display text-2xl font-bold tracking-tight sm:text-3xl">
-            The Members Lounge, en La Ceiba.
-          </h2>
-          <div className="mt-8 grid items-center gap-10 lg:grid-cols-2">
-            <figure className="break-inside-avoid">
-              <div className="relative aspect-[3/2] overflow-hidden rounded-2xl border border-line">
-                <Image
-                  src="/images/lounge-la-ceiba.jpg"
-                  alt="Terraza tipo lounge de referencia en La Ceiba"
-                  fill
-                  sizes="(max-width: 1024px) 100vw, 440px"
-                  className="object-cover"
-                />
-              </div>
-              <figcaption className="mt-3 font-display text-[10px] font-semibold tracking-[0.2em] text-stone uppercase">
-                Terraza tipo lounge · referencia
-              </figcaption>
-            </figure>
-            <div>
-              <p className="max-w-md text-[15px] leading-relaxed text-ink-mute">
-                La ubicación de La Ceiba contempla un área tipo lounge, diseñada
-                como espacio complementario para que los profesionales trabajen
-                entre citas, esperen de forma cómoda y coincidan con otros
-                usuarios autorizados del espacio.
-              </p>
-              <div className="mt-6 rounded-2xl border border-line bg-surface p-6">
-                <p className="text-sm leading-relaxed text-ink-mute">
-                  Es una <strong>amenidad interna del concepto</strong>, de uso
-                  exclusivo para usuarios autorizados.
-                </p>
-                <p className="mt-3 text-sm leading-relaxed text-stone-deep">
-                  No es cafetería abierta al público, bar ni restaurante, y no
-                  genera una operación independiente de alimentos y bebidas.
-                </p>
-              </div>
-            </div>
+        <section className="mt-16">
+          <SectionHead eyebrow="05 · Amenidad distintiva" title="The Members Lounge, en La Ceiba." />
+          <div className="mt-8">
+            <DocImage
+              src="/images/lounge-la-ceiba.jpg"
+              alt="Terraza tipo lounge de referencia en La Ceiba"
+              caption="Terraza tipo lounge · referencia"
+            />
+          </div>
+          <p className="mt-8 max-w-2xl text-[15px] leading-relaxed text-ink-mute">
+            La ubicación de La Ceiba contempla un área tipo lounge, diseñada como
+            espacio complementario para que los profesionales trabajen entre
+            citas, esperen de forma cómoda y coincidan con otros usuarios
+            autorizados del espacio.
+          </p>
+          <div className="mt-6 max-w-2xl break-inside-avoid rounded-2xl border border-line bg-surface p-6">
+            <p className="text-sm leading-relaxed text-ink-mute">
+              Es una <strong>amenidad interna del concepto</strong>, de uso
+              exclusivo para usuarios autorizados.
+            </p>
+            <p className="mt-3 text-sm leading-relaxed text-stone-deep">
+              No es cafetería abierta al público, bar ni restaurante, y no genera
+              una operación independiente de alimentos y bebidas.
+            </p>
           </div>
         </section>
 
         {/* ============ 06 · COMPATIBILIDAD ============ */}
-        <section className="mt-16 break-inside-avoid">
-          <p className="eyebrow">06 · Compatibilidad con Plaza La Ceiba</p>
-          <h2 className="mt-3 font-display text-2xl font-bold tracking-tight sm:text-3xl">
-            Un uso que suma a una plaza premium.
-          </h2>
+        <section className="mt-16">
+          <SectionHead eyebrow="06 · Compatibilidad con Plaza La Ceiba" title="Un uso que suma a una plaza premium." />
           <ul className="mt-8 grid gap-x-10 gap-y-3.5 sm:grid-cols-2">
             {COMPATIBILIDAD.map((c) => (
               <li key={c} className="flex items-start gap-3 text-[15px] leading-relaxed text-ink-mute">
@@ -302,15 +284,11 @@ export default function ConceptLaCeibaPage() {
         </section>
 
         {/* ============ 07 · PERFIL DEL USUARIO ============ */}
-        <section className="mt-16 break-inside-avoid">
-          <p className="eyebrow">07 · Perfil del usuario</p>
-          <h2 className="mt-3 font-display text-2xl font-bold tracking-tight sm:text-3xl">
-            Público profesional y programado.
-          </h2>
+        <section className="mt-16">
+          <SectionHead eyebrow="07 · Perfil del usuario" title="Público profesional y programado." />
           <p className="mt-4 max-w-2xl text-[15px] leading-relaxed text-ink-mute">
-            El público de The Practice es profesional y acude con cita: son
-            especialistas independientes y sus clientes, en un entorno privado y
-            cuidado.
+            El público de The Practice es profesional y acude con cita, en un
+            entorno privado y cuidado.
           </p>
           <ul className="mt-8 grid gap-x-10 gap-y-3.5 sm:grid-cols-2">
             {PERFIL.map((p) => (
@@ -323,11 +301,8 @@ export default function ConceptLaCeibaPage() {
         </section>
 
         {/* ============ 08 · ESTÁNDARES DE OPERACIÓN ============ */}
-        <section className="mt-16 break-before-page">
-          <p className="eyebrow">08 · Estándares de operación</p>
-          <h2 className="mt-3 font-display text-2xl font-bold tracking-tight sm:text-3xl">
-            Compromisos con el inmueble y la plaza.
-          </h2>
+        <section className="mt-16">
+          <SectionHead eyebrow="08 · Estándares de operación" title="Compromisos con el inmueble y la plaza." />
           <ul className="mt-8 grid gap-x-10 gap-y-3.5 sm:grid-cols-2">
             {ESTANDARES.map((e) => (
               <li key={e} className="flex items-start gap-3 text-[15px] leading-relaxed text-ink-mute">
@@ -339,17 +314,11 @@ export default function ConceptLaCeibaPage() {
         </section>
 
         {/* ============ 09 · BENEFICIO PARA LA PLAZA ============ */}
-        <section className="mt-16 break-inside-avoid">
-          <p className="eyebrow">09 · Beneficio para la propiedad</p>
-          <h2 className="mt-3 font-display text-2xl font-bold tracking-tight sm:text-3xl">
-            Desde la perspectiva del inmueble.
-          </h2>
+        <section className="mt-16">
+          <SectionHead eyebrow="09 · Beneficio para la propiedad" title="Desde la perspectiva del inmueble." />
           <div className="mt-8 grid gap-4 sm:grid-cols-2">
             {BENEFICIOS.map((b) => (
-              <div
-                key={b.title}
-                className="break-inside-avoid rounded-2xl border border-line bg-surface p-6"
-              >
+              <div key={b.title} className="break-inside-avoid rounded-2xl border border-line bg-surface p-6">
                 <h3 className="font-display text-sm font-bold">{b.title}</h3>
                 <p className="mt-1.5 text-sm leading-relaxed text-stone-deep">{b.text}</p>
               </div>

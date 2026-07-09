@@ -174,4 +174,15 @@
   @page {
     margin: 14mm;
   }
+  /* Evita cortes feos: los títulos no se quedan solos al final de página y las
+     imágenes no se parten entre hojas. */
+  h1,
+  h2,
+  h3 {
+    break-after: avoid-page;
+  }
+  img,
+  figure {
+    break-inside: avoid;
+  }
 }
