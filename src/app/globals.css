@@ -184,16 +184,21 @@
      la fragmenta igual (nunca se recorta contenido). */
   main > section {
     break-inside: avoid;
+    page-break-inside: avoid; /* legacy — Safari/WebKit y navegadores viejos */
   }
   /* Refuerzo: los títulos no se quedan solos al final de página y las
-     imágenes/tarjetas no se parten entre hojas. */
+     imágenes/tarjetas no se parten entre hojas. Se incluyen las propiedades
+     legacy (page-break-*) porque Safari/WebKit no respeta las modernas
+     (break-inside / break-after) para los saltos de página. */
   h1,
   h2,
   h3 {
     break-after: avoid-page;
+    page-break-after: avoid; /* legacy */
   }
   img,
   figure {
     break-inside: avoid;
+    page-break-inside: avoid; /* legacy */
   }
 }
