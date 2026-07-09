@@ -241,8 +241,8 @@ export default async function HomePage() {
               {
                 icon: CalendarCheck,
                 step: "02",
-                title: "Elige tu membresía",
-                text: "Acceso a espacios, tecnología y comunidad. Reserva salas desde tu panel en segundos.",
+                title: "Reserva tu primera sala",
+                text: "Sin membresía ni compromiso: reserva por hora y paga solo por lo que uses. Subes de plan cuando tenga sentido.",
               },
               {
                 icon: KeyRound,
@@ -327,7 +327,7 @@ export default async function HomePage() {
           <SectionHeading
             eyebrow="Membresías"
             title="Una membresía es acceso, no renta de horas."
-            description="Acceso a espacios premium, tecnología, comunidad, visibilidad y a toda la red de The Practice. Las horas de sala vienen incluidas."
+            description="Empieza pagando por hora, sin compromiso. Cuando The Practice ya sea parte de tu semana, una membresía te da más horas, mejor tarifa, comunidad y toda la red — con horas incluidas cada mes."
             align="center"
           />
           <div className="mt-14 grid gap-6 md:grid-cols-2 xl:grid-cols-4">
@@ -336,9 +336,13 @@ export default async function HomePage() {
             ))}
           </div>
           <p className="mt-8 text-center text-sm text-stone-deep">
-            ¿Abriendo en La Ceiba?{" "}
+            Empieza sin compromiso:{" "}
+            <Link href="/memberships" className="font-semibold text-clay hover:underline">
+              reserva por hora →
+            </Link>
+            <span className="mx-2 text-line-strong">·</span>
             <Link href="/la-ceiba" className="font-semibold text-clay hover:underline">
-              Conoce los precios founder →
+              precios founder La Ceiba →
             </Link>
           </p>
         </section>
