@@ -330,7 +330,7 @@ export default async function HomePage() {
             description="Empieza pagando por hora, sin compromiso. Cuando The Practice ya sea parte de tu semana, una membresía te da más horas, mejor tarifa, comunidad y toda la red — con horas incluidas cada mes."
             align="center"
           />
-          <div className="mt-14 grid gap-6 md:grid-cols-2 xl:grid-cols-4">
+          <div className="mt-14 grid gap-5 sm:grid-cols-2 xl:grid-cols-5">
             {plans.map((plan) => (
               <PlanCard key={plan.id} plan={plan} />
             ))}

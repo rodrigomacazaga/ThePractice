@@ -232,7 +232,7 @@ export default async function MembershipsPage() {
               ))}
             </div>
 
-            <div className="mt-12 grid gap-6 md:grid-cols-2 xl:grid-cols-4">
+            <div className="mt-12 grid gap-5 sm:grid-cols-2 xl:grid-cols-5">
               {plans.map((plan) => (
                 <PlanCard key={plan.id} plan={plan} />
               ))}

@@ -265,6 +265,27 @@ async function main() {
       sort: 0,
     },
     {
+      code: "grow",
+      name: "Grow",
+      tagline: "Tu primera práctica digital completa.",
+      monthlyPriceCents: 290000,
+      founderPriceCents: 230000,
+      includedCredits: 10,
+      rolloverLimit: 3,
+      micrositeTier: "PRO" as const,
+      includesLocker: true,
+      features: [
+        "10 horas de sala al mes",
+        "Micrositio completo con reservas",
+        "Cobros online de clientes",
+        "Recordatorios automáticos",
+        "Tarifa de miembro en horas extra",
+        "Locker incluido sin costo",
+        "Acceso a la comunidad",
+      ],
+      sort: 1,
+    },
+    {
       code: "pro",
       name: "Pro",
       tagline: "El plan de la práctica en crecimiento.",
@@ -284,7 +305,7 @@ async function main() {
         "Precio preferente en horas extra",
         "Soporte prioritario",
       ],
-      sort: 1,
+      sort: 2,
     },
     {
       code: "premium",
@@ -308,7 +329,7 @@ async function main() {
         "Horarios recurrentes",
         "Descuento en horas adicionales",
       ],
-      sort: 2,
+      sort: 3,
     },
     {
       code: "resident",
@@ -332,7 +353,7 @@ async function main() {
         "Leads prioritarios",
         "Soporte concierge",
       ],
-      sort: 3,
+      sort: 4,
     },
   ];
 
@@ -340,9 +361,9 @@ async function main() {
   for (const p of plansData) {
     plans[p.code] = await db.membershipPlan.upsert({
       where: { code: p.code },
-      // features e includesLocker se sincronizan con el seed en cada corrida;
+      // features, includesLocker y sort se sincronizan en cada corrida;
       // los precios NO se tocan aquí para respetar ediciones desde admin.
-      update: { features: p.features, includesLocker: true },
+      update: { features: p.features, includesLocker: true, sort: p.sort },
       create: p,
     });
   }

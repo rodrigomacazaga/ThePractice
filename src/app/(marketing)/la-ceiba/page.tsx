@@ -205,7 +205,7 @@ export default async function LaCeibaLandingPage() {
               description="Estos precios solo existen antes de la apertura y se conservan mientras tu membresía siga activa."
               align="center"
             />
-            <div className="mt-14 grid gap-6 md:grid-cols-2 xl:grid-cols-4">
+            <div className="mt-14 grid gap-5 sm:grid-cols-2 xl:grid-cols-5">
               {plans.map((plan) => (
                 <PlanCard key={plan.id} plan={plan} showFounderPrice ctaHref="#aplicar" />
               ))}
