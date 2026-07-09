@@ -19,7 +19,7 @@ export const site = {
 export const mainNav = [
   { label: "Para profesionales", href: "/for-practitioners" },
   { label: "Para clientes", href: "/for-clients" },
-  { label: "Membresías", href: "/memberships" },
+  { label: "Precios", href: "/memberships" },
   { label: "Salas", href: "/rooms" },
   { label: "Ubicaciones", href: "/locations" },
   { label: "Directorio", href: "/directory" },
@@ -28,7 +28,7 @@ export const mainNav = [
 export const footerNav = {
   producto: [
     { label: "Cómo funciona", href: "/how-it-works" },
-    { label: "Membresías", href: "/memberships" },
+    { label: "Precios", href: "/memberships" },
     { label: "Salas", href: "/rooms" },
     { label: "Ubicaciones", href: "/locations" },
     { label: "Directorio", href: "/directory" },

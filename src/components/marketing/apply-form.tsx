@@ -176,15 +176,14 @@ export function ApplyForm({
             <option value="mixed">Combinación</option>
           </Select>
         </Field>
-        <Field label="¿Qué membresía te interesa?" error={errors.interestedPlan?.message} htmlFor="interestedPlan">
+        <Field label="¿Cómo te gustaría empezar?" error={errors.interestedPlan?.message} htmlFor="interestedPlan">
           <Select id="interestedPlan" defaultValue="" {...register("interestedPlan")}>
             <option value="" disabled>
               Selecciona
             </option>
-            <option value="flex">Flex — por hora</option>
-            <option value="pro">Pro — uso regular</option>
-            <option value="premium">Premium — práctica establecida</option>
-            <option value="resident">Resident — horarios fijos</option>
+            <option value="por-hora">Reserva por hora — sin membresía</option>
+            <option value="pro">Pro — atiendo cada semana</option>
+            <option value="premium">Premium — mayor volumen</option>
             <option value="unsure">Aún no lo sé</option>
           </Select>
         </Field>

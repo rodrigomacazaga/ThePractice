@@ -368,6 +368,19 @@ async function main() {
     });
   }
 
+  // Catálogo público: solo Pro y Premium. Flex, Grow y Resident quedan
+  // INACTIVOS (no se borran — el admin y las membresías históricas los
+  // conservan). Los queries públicos filtran active:true, así que desaparecen
+  // de todas las vistas sin más cambios.
+  await db.membershipPlan.updateMany({
+    where: { code: { in: ["flex", "grow", "resident"] } },
+    data: { active: false },
+  });
+  await db.membershipPlan.updateMany({
+    where: { code: { in: ["pro", "premium"] } },
+    data: { active: true },
+  });
+
   // ------------------------------------------------------------
   // Paquetes de horas
   // ------------------------------------------------------------

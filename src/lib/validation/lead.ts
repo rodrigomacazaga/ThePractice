@@ -12,7 +12,7 @@ export const applySchema = z.object({
   weeklySessions: z.coerce.number().int().min(1, "Mínimo 1 sesión").max(80),
   hasClients: z.enum(["yes", "no", "some"]),
   roomPreference: z.enum(["standard", "premium", "studio", "mixed"]),
-  interestedPlan: z.enum(["flex", "pro", "premium", "resident", "unsure"]),
+  interestedPlan: z.enum(["por-hora", "pro", "premium", "unsure"]),
   wantsLocker: z.boolean().optional().default(false),
   message: z.string().max(2000).optional(),
   source: z.string().max(60).optional(),

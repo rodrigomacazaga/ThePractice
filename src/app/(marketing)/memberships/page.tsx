@@ -50,7 +50,7 @@ const PRICING_FAQ = [
   },
   {
     q: "¿Las membresías incluyen locker?",
-    a: "Sí. Toda membresía activa incluye un locker personal sin costo adicional para guardar tu material entre sesiones. Se asigna en tu ubicación principal y está sujeto a disponibilidad; el plan Resident incluye locker grande garantizado.",
+    a: "Sí. Toda membresía activa incluye un locker personal sin costo adicional para guardar tu material entre sesiones. Se asigna en tu ubicación principal y está sujeto a disponibilidad.",
   },
 ];
 
@@ -80,14 +80,14 @@ export default async function MembershipsPage() {
       <section className="container-page py-20 lg:py-24">
         <SectionHeading
           eyebrow="Precios"
-          title="Empieza sin compromiso. Crece a tu ritmo."
+          title="Empieza sin compromiso. Elige el ritmo que hace sentido."
           description="No necesitas una membresía para empezar. Reserva por hora, conoce el espacio y descubre cuánto usas The Practice. Cuando tenga sentido, dar el siguiente paso será natural."
           align="center"
         />
       </section>
 
       {/* ============ PAY AS YOU GO (la puerta de entrada) ============ */}
-      <section className="container-page pb-16">
+      <section id="pay-as-you-go" className="container-page scroll-mt-24 pb-16">
         <div className="overflow-hidden rounded-2xl border border-line-strong bg-surface shadow-(--shadow-lift)">
           <div className="grid lg:grid-cols-[1.3fr_1fr]">
             <div className="p-8 sm:p-10">
@@ -218,21 +218,11 @@ export default async function MembershipsPage() {
             <SectionHeading
               eyebrow="Membresías"
               title="El siguiente paso, cuando ya conoces tu ritmo."
-              description="Una membresía no es renta de horas: es acceso a la infraestructura, la tecnología, la comunidad y la red — con horas incluidas y la mejor tarifa. Cada plan es una etapa de tu práctica; subes cuando tu práctica lo pide, no antes."
+              description="Una membresía no es renta de horas: es acceso a la infraestructura, la tecnología, la comunidad y la red — con horas incluidas y la mejor tarifa. Pro para quien atiende cada semana; Premium para mayor volumen y prioridad."
               align="center"
             />
 
-            {/* La evolución, como etapas */}
-            <div className="mx-auto mt-8 flex max-w-2xl flex-wrap items-center justify-center gap-x-3 gap-y-2">
-              {["Empiezas", "Creces", "Te consolidas", "Escalas"].map((stage, i) => (
-                <span key={stage} className="flex items-center gap-3">
-                  <span className="eyebrow">{stage}</span>
-                  {i < 3 && <ArrowRight className="h-3 w-3 text-line-strong" />}
-                </span>
-              ))}
-            </div>
-
-            <div className="mt-12 grid gap-5 sm:grid-cols-2 xl:grid-cols-5">
+            <div className="mx-auto mt-12 grid max-w-3xl gap-6 sm:grid-cols-2">
               {plans.map((plan) => (
                 <PlanCard key={plan.id} plan={plan} />
               ))}

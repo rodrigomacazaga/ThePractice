@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { ArrowRight, Building2, CalendarClock, Globe2, Landmark, Lock, Wallet } from "lucide-react";
 import { db } from "@/lib/db";
 import { safeQuery } from "@/lib/safe-query";
@@ -77,7 +78,7 @@ export default async function ForPractitionersPage() {
                 <ArrowRight className="h-4 w-4" />
               </ButtonLink>
               <ButtonLink href="/memberships" variant="outline-light" size="xl">
-                Ver membresías
+                Ver precios
               </ButtonLink>
             </div>
           </div>
@@ -149,15 +150,21 @@ export default async function ForPractitionersPage() {
       {plans.length > 0 && (
         <section className="container-page py-20 lg:py-28">
           <SectionHeading
-            eyebrow="Membresías"
-            title="Planes que crecen con tu práctica."
+            eyebrow="Precios"
+            title="Empieza por hora. Sube de plan cuando tenga sentido."
+            description="Reserva por hora sin membresía. Si atiendes cada semana, Pro. Si tienes mayor volumen, Premium."
             align="center"
           />
-          <div className="mt-14 grid gap-5 sm:grid-cols-2 xl:grid-cols-5">
+          <div className="mx-auto mt-14 grid max-w-3xl gap-6 sm:grid-cols-2">
             {plans.map((plan) => (
               <PlanCard key={plan.id} plan={plan} />
             ))}
           </div>
+          <p className="mt-8 text-center text-sm text-stone-deep">
+            <Link href="/memberships" className="font-semibold text-clay hover:underline">
+              Ver todos los precios y la calculadora →
+            </Link>
+          </p>
         </section>
       )}
 

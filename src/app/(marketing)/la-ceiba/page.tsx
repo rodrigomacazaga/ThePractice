@@ -202,10 +202,10 @@ export default async function LaCeibaLandingPage() {
             <SectionHeading
               eyebrow="Membresías founder"
               title="Precios de preventa. De por vida."
-              description="Estos precios solo existen antes de la apertura y se conservan mientras tu membresía siga activa."
+              description="Estos precios solo existen antes de la apertura y se conservan mientras tu membresía siga activa. También podrás reservar por hora sin membresía desde la apertura."
               align="center"
             />
-            <div className="mt-14 grid gap-5 sm:grid-cols-2 xl:grid-cols-5">
+            <div className="mx-auto mt-14 grid max-w-3xl gap-6 sm:grid-cols-2">
               {plans.map((plan) => (
                 <PlanCard key={plan.id} plan={plan} showFounderPrice ctaHref="#aplicar" />
               ))}

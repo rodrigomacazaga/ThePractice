@@ -18,7 +18,7 @@ const SECTIONS: { title: string; items: { q: string; a: string }[] }[] = [
       },
       {
         q: "¿Cuánto cuesta?",
-        a: "Puedes pagar por hora (desde $280 MXN), comprar paquetes de horas con descuento, o contratar una membresía mensual desde $1,690 MXN que incluye horas, micrositio y directorio según el plan.",
+        a: "Puedes empezar reservando por hora, sin membresía, desde $320 MXN/hora. También puedes comprar paquetes de horas con descuento. Y si atiendes cada semana, una membresía (Pro o Premium) te da horas incluidas, mejor tarifa, micrositio y directorio.",
       },
       {
         q: "¿Cómo funcionan los créditos?",
@@ -34,7 +34,7 @@ const SECTIONS: { title: string; items: { q: string; a: string }[] }[] = [
       },
       {
         q: "¿Las membresías incluyen locker?",
-        a: "Sí. Toda membresía activa incluye un locker personal sin costo adicional, asignado en tu ubicación principal y sujeto a disponibilidad. El plan Resident garantiza locker grande.",
+        a: "Sí. Toda membresía activa incluye un locker personal sin costo adicional, asignado en tu ubicación principal y sujeto a disponibilidad.",
       },
     ],
   },

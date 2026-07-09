@@ -1,5 +1,4 @@
 import Image from "next/image";
-import Link from "next/link";
 import {
   ArrowRight,
   CalendarCheck,
@@ -18,12 +17,12 @@ import {
 } from "lucide-react";
 import { db } from "@/lib/db";
 import { safeQuery } from "@/lib/safe-query";
+import { formatMXN, formatCredits } from "@/lib/utils";
 import { ButtonLink } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { LogoMark } from "@/components/brand/logo";
 import { SectionHeading } from "@/components/marketing/section-heading";
 import { FloorPlanArt } from "@/components/marketing/floor-plan-art";
-import { PlanCard } from "@/components/marketing/plan-card";
 import { RoomTypeCard } from "@/components/marketing/room-type-card";
 import { LocationCard } from "@/components/marketing/location-card";
 
@@ -85,6 +84,12 @@ export default async function HomePage() {
     ),
   ]);
 
+  // Solo Pro y Premium son públicos (los demás están inactivos en el catálogo).
+  const pro = plans.find((p) => p.code === "pro");
+  const premium = plans.find((p) => p.code === "premium");
+  const minHourly =
+    roomTypes.length > 0 ? Math.min(...roomTypes.map((rt) => rt.baseHourlyPriceCents)) : 32000;
+
   return (
     <>
       {/* ============ HERO ============ */}
@@ -103,14 +108,17 @@ export default async function HomePage() {
             pacientes; nosotros, en todo lo demás.
           </p>
           <div className="mt-9 flex flex-wrap gap-3">
-            <ButtonLink href="/apply" size="xl">
-              Aplicar como practitioner
+            {/* TODO: conectar "Ver disponibilidad" al flujo real de disponibilidad/
+                reserva cuando exista. Hoy lleva al bloque Pay as you go de /memberships. */}
+            <ButtonLink href="/memberships#pay-as-you-go" size="xl">
+              Ver disponibilidad
               <ArrowRight className="h-4 w-4" />
             </ButtonLink>
-            <ButtonLink href="/directory" variant="outline" size="xl">
-              Encontrar un profesional
+            <ButtonLink href="/memberships" variant="outline" size="xl">
+              Ver precios
             </ButtonLink>
           </div>
+          <p className="mt-3 text-sm text-stone">Reserva por hora. Sin membresía.</p>
           <div className="mt-10 flex flex-wrap gap-2">
             {AUDIENCES.map((a) => (
               <Badge key={a} variant="outline" size="md">
@@ -192,79 +200,79 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* ============ UN DÍA EN THE PRACTICE (la experiencia) ============ */}
+      {/* ============ CÓMO FUNCIONA (cómo empiezas) ============ */}
       <section className="container-page py-20 lg:py-28">
         <SectionHeading
-          eyebrow="Un día en The Practice"
-          title="Así se siente tener tu práctica aquí."
-          description="Sin manuales ni configuraciones. Solo tu práctica, funcionando."
+          eyebrow="Cómo empezar"
+          title="De aplicación a primera sesión en días, no meses."
           align="center"
         />
-        <div className="mx-auto mt-14 max-w-2xl">
-          {DAY.map((moment, i) => (
-            <div key={moment.time} className="flex gap-5">
-              {/* Columna tiempo + línea */}
-              <div className="flex flex-col items-center">
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-ink text-paper">
-                  <moment.icon className="h-4.5 w-4.5" strokeWidth={1.75} />
+        <div className="mt-14 grid gap-6 sm:grid-cols-3">
+          {[
+            {
+              icon: ShieldCheck,
+              step: "01",
+              title: "Aplica y verifica tu perfil",
+              text: "Cuéntanos de tu práctica. Verificamos credenciales para mantener una comunidad profesional y curada.",
+            },
+            {
+              icon: CalendarCheck,
+              step: "02",
+              title: "Reserva tu primera sala",
+              text: "Sin membresía ni compromiso: reserva por hora y paga solo por lo que uses. Subes de plan cuando tenga sentido.",
+            },
+            {
+              icon: KeyRound,
+              step: "03",
+              title: "Atiende y crece",
+              text: "Llega, ingresa con tu código y atiende. Tu micrositio y el directorio te traen nuevos clientes.",
+            },
+          ].map((item) => (
+            <div
+              key={item.step}
+              className="rounded-2xl border border-line bg-surface p-7 shadow-(--shadow-card)"
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-ink text-paper">
+                  <item.icon className="h-5 w-5" strokeWidth={1.75} />
                 </div>
-                {i < DAY.length - 1 && <span className="my-1 w-px flex-1 bg-line-strong" />}
+                <span className="font-display text-3xl font-bold text-line-strong">
+                  {item.step}
+                </span>
               </div>
-              {/* Contenido */}
-              <div className={i < DAY.length - 1 ? "pb-8" : ""}>
-                <p className="font-display text-sm font-bold tracking-tight text-clay-deep">
-                  {moment.time}
-                </p>
-                <p className="mt-1 text-[15px] leading-relaxed text-ink-mute">{moment.text}</p>
-              </div>
+              <h3 className="mt-5 font-display text-lg font-bold tracking-tight">{item.title}</h3>
+              <p className="mt-2 text-sm leading-relaxed text-stone-deep">{item.text}</p>
             </div>
           ))}
         </div>
       </section>
 
-      {/* ============ CÓMO FUNCIONA (cómo empiezas) ============ */}
+      {/* ============ UN DÍA EN THE PRACTICE (la experiencia) ============ */}
       <section className="border-y border-line bg-surface py-20 lg:py-28">
         <div className="container-page">
           <SectionHeading
-            eyebrow="Cómo empezar"
-            title="De aplicación a primera sesión en días, no meses."
+            eyebrow="Un día en The Practice"
+            title="Así se siente tener tu práctica aquí."
+            description="Sin manuales ni configuraciones. Solo tu práctica, funcionando."
             align="center"
           />
-          <div className="mt-14 grid gap-6 sm:grid-cols-3">
-            {[
-              {
-                icon: ShieldCheck,
-                step: "01",
-                title: "Aplica y verifica tu perfil",
-                text: "Cuéntanos de tu práctica. Verificamos credenciales para mantener una comunidad profesional y curada.",
-              },
-              {
-                icon: CalendarCheck,
-                step: "02",
-                title: "Reserva tu primera sala",
-                text: "Sin membresía ni compromiso: reserva por hora y paga solo por lo que uses. Subes de plan cuando tenga sentido.",
-              },
-              {
-                icon: KeyRound,
-                step: "03",
-                title: "Atiende y crece",
-                text: "Llega, ingresa con tu código y atiende. Tu micrositio y el directorio te traen nuevos clientes.",
-              },
-            ].map((item) => (
-              <div
-                key={item.step}
-                className="rounded-2xl border border-line bg-paper p-7 shadow-(--shadow-card)"
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-ink text-paper">
-                    <item.icon className="h-5 w-5" strokeWidth={1.75} />
+          <div className="mx-auto mt-14 max-w-2xl">
+            {DAY.map((moment, i) => (
+              <div key={moment.time} className="flex gap-5">
+                {/* Columna tiempo + línea */}
+                <div className="flex flex-col items-center">
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-ink text-paper">
+                    <moment.icon className="h-4.5 w-4.5" strokeWidth={1.75} />
                   </div>
-                  <span className="font-display text-3xl font-bold text-line-strong">
-                    {item.step}
-                  </span>
+                  {i < DAY.length - 1 && <span className="my-1 w-px flex-1 bg-line-strong" />}
                 </div>
-                <h3 className="mt-5 font-display text-lg font-bold tracking-tight">{item.title}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-stone-deep">{item.text}</p>
+                {/* Contenido */}
+                <div className={i < DAY.length - 1 ? "pb-8" : ""}>
+                  <p className="font-display text-sm font-bold tracking-tight text-clay-deep">
+                    {moment.time}
+                  </p>
+                  <p className="mt-1 text-[15px] leading-relaxed text-ink-mute">{moment.text}</p>
+                </div>
               </div>
             ))}
           </div>
@@ -293,7 +301,7 @@ export default async function HomePage() {
         </section>
       )}
 
-      {/* ============ PLATAFORMA DIGITAL ============ */}
+      {/* ============ PLATAFORMA DIGITAL (qué incluye) ============ */}
       <section className="bg-ink py-20 text-paper lg:py-28">
         <div className="container-page">
           <SectionHeading
@@ -320,33 +328,6 @@ export default async function HomePage() {
           </div>
         </div>
       </section>
-
-      {/* ============ MEMBRESÍAS (acceso, no horas) ============ */}
-      {plans.length > 0 && (
-        <section className="container-page py-20 lg:py-28">
-          <SectionHeading
-            eyebrow="Membresías"
-            title="Una membresía es acceso, no renta de horas."
-            description="Empieza pagando por hora, sin compromiso. Cuando The Practice ya sea parte de tu semana, una membresía te da más horas, mejor tarifa, comunidad y toda la red — con horas incluidas cada mes."
-            align="center"
-          />
-          <div className="mt-14 grid gap-5 sm:grid-cols-2 xl:grid-cols-5">
-            {plans.map((plan) => (
-              <PlanCard key={plan.id} plan={plan} />
-            ))}
-          </div>
-          <p className="mt-8 text-center text-sm text-stone-deep">
-            Empieza sin compromiso:{" "}
-            <Link href="/memberships" className="font-semibold text-clay hover:underline">
-              reserva por hora →
-            </Link>
-            <span className="mx-2 text-line-strong">·</span>
-            <Link href="/la-ceiba" className="font-semibold text-clay hover:underline">
-              precios founder La Ceiba →
-            </Link>
-          </p>
-        </section>
-      )}
 
       {/* ============ COMUNIDAD (autoorganizada) ============ */}
       <section className="border-y border-line bg-surface py-20 lg:py-28">
@@ -375,36 +356,109 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* ============ THE PRACTICE NETWORK ============ */}
-      {locations.length > 0 && (
-        <section className="container-page py-20 lg:py-28">
-          <div className="flex flex-wrap items-end justify-between gap-6">
-            <SectionHeading
-              eyebrow="The Practice Network"
-              title="No abrimos sucursales. Construimos una red."
-              description="The Practice nació para ser una red de espacios para profesionales independientes. Empieza en Querétaro y crece ciudad por ciudad — una sola membresía, en toda la red."
-            />
-            <ButtonLink href="/locations" variant="outline">
-              Conocer la red
-              <ArrowRight className="h-4 w-4" />
+      {/* ============ PRECIOS RESUMIDOS (tres caminos) ============ */}
+      <section className="container-page py-20 lg:py-28">
+        <SectionHeading
+          eyebrow="Precios"
+          title="Empieza según tu ritmo."
+          description="No tienes que decidir hoy. Empieza pagando por hora y sube a un plan solo cuando The Practice ya sea parte de tu semana."
+          align="center"
+        />
+        <div className="mx-auto mt-14 grid max-w-5xl gap-5 lg:grid-cols-3">
+          {/* Reserva por hora */}
+          <div className="flex flex-col rounded-2xl border border-line bg-surface p-7 shadow-(--shadow-card)">
+            <p className="eyebrow">Reserva por hora</p>
+            <p className="mt-4 font-display text-3xl font-bold tracking-tight">
+              desde {formatMXN(minHourly)}
+              <span className="text-base font-semibold text-stone"> /hora</span>
+            </p>
+            <p className="mt-3 flex-1 text-sm leading-relaxed text-stone-deep">
+              Sin membresía, sin permanencia. Ideal para conocer The Practice,
+              probar un espacio o uso ocasional.
+            </p>
+            <ButtonLink
+              href="/memberships#pay-as-you-go"
+              variant="outline"
+              size="lg"
+              className="mt-6 w-full"
+            >
+              Ver disponibilidad
             </ButtonLink>
           </div>
-          <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {locations.map((location) => (
-              <LocationCard
-                key={location.id}
-                location={location}
-                roomCount={location._count.rooms}
-                founding={location.slug === "la-ceiba"}
+
+          {/* Pro — el plan estrella */}
+          {pro && (
+            <div className="relative flex flex-col rounded-2xl border border-ink bg-ink p-7 text-paper shadow-(--shadow-lift)">
+              <Badge variant="clay" className="absolute -top-3 left-7">
+                Más elegido
+              </Badge>
+              <p className="eyebrow-light">Pro</p>
+              <p className="mt-4 font-display text-3xl font-bold tracking-tight">
+                {formatMXN(pro.monthlyPriceCents)}
+                <span className="text-base font-semibold text-paper/60"> /mes</span>
+              </p>
+              <p className="mt-3 flex-1 text-sm leading-relaxed text-paper/65">
+                Para quien atiende cada semana. {formatCredits(pro.includedCredits)}{" "}
+                créditos, micrositio con reservas, cobros online y mejor tarifa.
+              </p>
+              <ButtonLink href="/memberships" variant="light" size="lg" className="mt-6 w-full">
+                Ver precios
+              </ButtonLink>
+            </div>
+          )}
+
+          {/* Premium */}
+          {premium && (
+            <div className="flex flex-col rounded-2xl border border-line bg-surface p-7 shadow-(--shadow-card)">
+              <p className="eyebrow">Premium</p>
+              <p className="mt-4 font-display text-3xl font-bold tracking-tight">
+                {formatMXN(premium.monthlyPriceCents)}
+                <span className="text-base font-semibold text-stone"> /mes</span>
+              </p>
+              <p className="mt-3 flex-1 text-sm leading-relaxed text-stone-deep">
+                Para mayor volumen y prioridad. {formatCredits(premium.includedCredits)}{" "}
+                créditos, perfil destacado y horarios prime.
+              </p>
+              <ButtonLink href="/memberships" variant="outline" size="lg" className="mt-6 w-full">
+                Ver precios
+              </ButtonLink>
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* ============ THE PRACTICE NETWORK ============ */}
+      {locations.length > 0 && (
+        <section className="border-y border-line bg-surface py-20 lg:py-28">
+          <div className="container-page">
+            <div className="flex flex-wrap items-end justify-between gap-6">
+              <SectionHeading
+                eyebrow="The Practice Network"
+                title="No abrimos sucursales. Construimos una red."
+                description="The Practice nació para ser una red de espacios para profesionales independientes. Empieza en Querétaro y crece ciudad por ciudad — una sola membresía, en toda la red."
               />
-            ))}
+              <ButtonLink href="/locations" variant="outline">
+                Conocer la red
+                <ArrowRight className="h-4 w-4" />
+              </ButtonLink>
+            </div>
+            <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              {locations.map((location) => (
+                <LocationCard
+                  key={location.id}
+                  location={location}
+                  roomCount={location._count.rooms}
+                  founding={location.slug === "la-ceiba"}
+                />
+              ))}
+            </div>
           </div>
         </section>
       )}
 
       {/* ============ PARA CLIENTES ============ */}
-      <section className="border-y border-line bg-surface py-20 lg:py-28">
-        <div className="container-page grid items-center gap-12 lg:grid-cols-2">
+      <section className="container-page py-20 lg:py-28">
+        <div className="grid items-center gap-12 lg:grid-cols-2">
           <div>
             <SectionHeading
               eyebrow="Para clientes"
@@ -459,7 +513,7 @@ export default async function HomePage() {
           </p>
           <div className="mt-9 flex flex-wrap justify-center gap-3">
             <ButtonLink href="/la-ceiba" variant="light" size="xl">
-              Conocer membresías founder
+              Conocer La Ceiba
               <ArrowRight className="h-4 w-4" />
             </ButtonLink>
             <ButtonLink href="/apply" variant="outline-light" size="xl">
