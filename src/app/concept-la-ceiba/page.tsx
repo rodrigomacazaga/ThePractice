@@ -4,11 +4,17 @@ import { LogoMark, Wordmark } from "@/components/brand/logo";
 import { site } from "@/config/site";
 import { PrintButton } from "./print-button";
 
+const DOC_DESCRIPTION =
+  "Documento informativo del concepto The Practice para proceso de arrendamiento.";
+
 export const metadata: Metadata = {
   title: "The Practice La Ceiba — Concepto",
-  description:
-    "Documento informativo del concepto The Practice para proceso de arrendamiento.",
+  description: DOC_DESCRIPTION,
   robots: { index: false, follow: false },
+  // Sobreescribe la descripción del sitio (que menciona giros) para que el
+  // Open Graph/Twitter de este documento sea neutral, no solo el contenido visible.
+  openGraph: { title: "The Practice La Ceiba — Concepto", description: DOC_DESCRIPTION },
+  twitter: { title: "The Practice La Ceiba — Concepto", description: DOC_DESCRIPTION },
 };
 
 // Contenido estructural del documento (institucional, sin información comercial).
