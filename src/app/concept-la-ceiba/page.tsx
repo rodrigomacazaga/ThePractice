@@ -108,7 +108,7 @@ export default function ConceptLaCeibaPage() {
           <figure className="mt-12 break-inside-avoid">
             <div className="relative aspect-[16/9] overflow-hidden rounded-2xl border border-line">
               <Image
-                src="/images/hero-space.jpg"
+                src="/images/room-premium.jpg"
                 alt="Interiores de referencia de The Practice"
                 fill
                 priority

@@ -12,7 +12,7 @@ export const site = {
   domain: "thepractice.mx",
   url: process.env.NEXT_PUBLIC_APP_URL ?? "https://thepractice.mx",
   email: "hola@thepractice.mx",
-  phone: "+52 442 000 0000",
+  phone: "+52 442 161 20 40",
   instagram: "https://instagram.com/thepractice.mx",
 } as const;
 
