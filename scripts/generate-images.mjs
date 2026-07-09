@@ -111,6 +111,19 @@ lights, folded sand-colored yoga mats neatly stacked on an oak shelf, a few smal
 props in a woven basket in the corner. Spacious, calm, premium — a boutique barre studio,
 not a gym.`,
   },
+  {
+    file: "lounge-la-ceiba.png",
+    prompt: `Professional architectural photography of a premium indoor-outdoor members lounge
+terrace, photorealistic, magazine quality. Warm minimalism: warm oak wood, ivory upholstery,
+warm charcoal accents, one muted terracotta clay accent. A spacious 150 sqm rooftop terrace
+lounge with: comfortable low lounge sofas and armchairs in warm ivory around low oak coffee
+tables, a small oak coffee bar with a chemex and ceramic cups in the corner, abundant lush
+green plants and a living green wall, a wooden slatted pergola overhead casting soft striped
+shadows, a couple of oak work tables with a single laptop for working between sessions,
+warm string lights and a paper lantern, soft golden hour daylight. Calm, sophisticated,
+like a Soho House terrace but Muji-calm and warm. No people, no text, no logos, no signage.
+Aspect ratio 3:2, eye-level shot on a 35mm lens.`,
+  },
 ];
 
 // Filtro opcional: node scripts/generate-images.mjs room-restore room-movement

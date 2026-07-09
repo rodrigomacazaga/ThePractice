@@ -29,9 +29,25 @@ async function main() {
   // ------------------------------------------------------------
   // Ubicaciones
   // ------------------------------------------------------------
+  const laCeibaAmenities = [
+    "The Members Lounge (150 m²)",
+    "Estacionamiento",
+    "WiFi de alta velocidad",
+    "Coffee station",
+    "Área de espera",
+    "Acceso con código",
+    "Limpieza entre sesiones",
+    "Aire acondicionado",
+    "Seguridad de plaza",
+  ];
   const laCeiba = await db.location.upsert({
     where: { slug: "la-ceiba" },
-    update: {},
+    // Sincroniza amenities y descripción en DBs existentes (sin tocar status/precios).
+    update: {
+      amenities: laCeibaAmenities,
+      description:
+        "Nuestra Founding Location: siete salas privadas dentro de Plaza La Ceiba, con The Members Lounge, estacionamiento, seguridad y un área común serena para recibir a tus clientes.",
+    },
     create: {
       slug: "la-ceiba",
       name: "The Practice La Ceiba",
@@ -40,19 +56,10 @@ async function main() {
       state: "Querétaro",
       address: "Plaza La Ceiba, Av. Principal 100, Local 12",
       description:
-        "Nuestra primera ubicación: siete salas privadas dentro de Plaza La Ceiba, con estacionamiento, seguridad y un área común serena para recibir a tus clientes.",
+        "Nuestra Founding Location: siete salas privadas dentro de Plaza La Ceiba, con The Members Lounge, estacionamiento, seguridad y un área común serena para recibir a tus clientes.",
       status: "OPEN",
       timezone: "America/Mexico_City",
-      amenities: [
-        "Estacionamiento",
-        "WiFi de alta velocidad",
-        "Coffee station",
-        "Área de espera",
-        "Acceso con código",
-        "Limpieza entre sesiones",
-        "Aire acondicionado",
-        "Seguridad de plaza",
-      ],
+      amenities: laCeibaAmenities,
       openingHour: 7,
       closingHour: 22,
       sort: 0,
@@ -75,19 +82,21 @@ async function main() {
   });
 
   await db.location.upsert({
-    where: { slug: "zibata" },
+    where: { slug: "centro-sur" },
     update: {},
     create: {
-      slug: "zibata",
-      name: "The Practice Zibatá",
-      shortName: "Zibatá",
-      city: "El Marqués",
+      slug: "centro-sur",
+      name: "The Practice Centro Sur",
+      shortName: "Centro Sur",
+      city: "Querétaro",
       state: "Querétaro",
-      description: "En evaluación: Zibatá y su corredor de bienestar.",
+      description: "En evaluación: la zona de Centro Sur en Querétaro.",
       status: "COMING_SOON",
       sort: 2,
     },
   });
+  // Limpia el slug anterior (Zibatá) en DBs ya sembradas.
+  await db.location.deleteMany({ where: { slug: "zibata" } });
 
   // ------------------------------------------------------------
   // Tipos de sala

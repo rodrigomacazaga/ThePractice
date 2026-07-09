@@ -7,9 +7,12 @@ import { LogoMark } from "@/components/brand/logo";
 export function LocationCard({
   location,
   roomCount,
+  founding = false,
 }: {
   location: Location;
   roomCount?: number;
+  /** La Ceiba nunca es "sucursal": es la Founding Location de la red. */
+  founding?: boolean;
 }) {
   const isOpen = location.status === "OPEN";
   const inner = (
@@ -20,8 +23,8 @@ export function LocationCard({
 
       <div className="relative">
         <div className="flex items-center justify-between">
-          <Badge variant={isOpen ? "sage" : "amber"}>
-            {isOpen ? "Abierto" : "Próximamente"}
+          <Badge variant={founding ? "clay" : isOpen ? "sage" : "amber"}>
+            {founding ? "Founding Location" : isOpen ? "Abierto" : "Próximamente"}
           </Badge>
           {isOpen && (
             <ArrowUpRight className="h-5 w-5 text-paper/40 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:text-paper" />

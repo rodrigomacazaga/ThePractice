@@ -65,7 +65,8 @@ export default async function LaCeibaLandingPage() {
       <section className="bg-ink text-paper">
         <div className="container-page grid items-center gap-14 py-20 lg:grid-cols-[1.1fr_0.9fr] lg:py-28">
           <div>
-            <div className="flex flex-wrap items-center gap-2">
+            <p className="eyebrow-light">The Practice Network · Founding Location</p>
+            <div className="mt-4 flex flex-wrap items-center gap-2">
               <Badge variant="clay" size="md">
                 Preventa founder
               </Badge>
@@ -146,6 +147,53 @@ export default async function LaCeibaLandingPage() {
           </div>
         </section>
       )}
+
+      {/* MEMBERS LOUNGE — exclusivo de La Ceiba */}
+      <section className="border-b border-line bg-surface py-20 lg:py-28">
+        <div className="container-page grid items-center gap-12 lg:grid-cols-2 lg:gap-16">
+          <div className="order-2 lg:order-1">
+            <p className="eyebrow">Exclusivo de La Ceiba</p>
+            <h2 className="mt-3 font-display text-3xl font-bold tracking-tight sm:text-4xl">
+              The Members Lounge.
+            </h2>
+            <p className="mt-5 max-w-lg text-base leading-relaxed text-stone-deep">
+              Una terraza de 150 m² pensada para que sigas conectado a tu
+              práctica entre sesiones. No es coworking ni una sala de espera: es
+              donde trabajas, piensas, aprendes y coincides con otros
+              profesionales.
+            </p>
+            <div className="mt-7 flex flex-wrap gap-2">
+              {[
+                "Café de especialidad",
+                "WiFi",
+                "Espacio para trabajar",
+                "Networking",
+                "Vegetación",
+                "Música",
+              ].map((chip) => (
+                <Badge key={chip} variant="outline" size="md">
+                  {chip}
+                </Badge>
+              ))}
+            </div>
+            <p className="mt-7 max-w-lg text-xs leading-relaxed text-stone">
+              Una característica única de nuestra Founding Location. Cada sede de
+              la red tendrá su propio carácter.
+            </p>
+          </div>
+          <div className="order-1 lg:order-2">
+            <div className="relative aspect-[3/2] overflow-hidden rounded-2xl shadow-(--shadow-lift)">
+              <Image
+                src="/images/lounge-la-ceiba.jpg"
+                alt="The Members Lounge: terraza de 150 m² en The Practice La Ceiba"
+                fill
+                sizes="(max-width: 1024px) 100vw, 50vw"
+                className="object-cover"
+              />
+            </div>
+          </div>
+        </div>
+      </section>
 
       {/* MEMBRESÍAS FOUNDER */}
       {plans.length > 0 && (

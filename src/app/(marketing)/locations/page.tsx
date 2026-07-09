@@ -8,9 +8,9 @@ import { ButtonLink } from "@/components/ui/button";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Ubicaciones",
+  title: "The Practice Network",
   description:
-    "The Practice La Ceiba en Querétaro, y próximamente Juriquilla, Zibatá y más. Una red de espacios premium para tu práctica.",
+    "The Practice nació para ser una red de espacios para profesionales independientes. La Ceiba es nuestra Founding Location en Querétaro; Juriquilla y Centro Sur vienen en camino.",
 };
 
 export default async function LocationsPage() {
@@ -28,9 +28,9 @@ export default async function LocationsPage() {
     <>
       <section className="container-page py-20 lg:py-24">
         <SectionHeading
-          eyebrow="Ubicaciones"
-          title="Una red de espacios, una sola membresía."
-          description="Tu membresía funciona en toda la red. Cada nueva ubicación amplía dónde puedes atender — sin costos extra."
+          eyebrow="The Practice Network"
+          title="No abrimos sucursales. Construimos una red."
+          description="The Practice nació para convertirse en una red de espacios para profesionales independientes. Una sola membresía funciona en toda la red — cada nueva sede amplía dónde puedes atender, sin costos extra."
         />
       </section>
 
@@ -41,15 +41,16 @@ export default async function LocationsPage() {
               key={location.id}
               location={location}
               roomCount={location._count.rooms}
+              founding={location.slug === "la-ceiba"}
             />
           ))}
         </div>
 
         <div className="mt-16 rounded-2xl border border-dashed border-line-strong bg-surface p-10 text-center">
-          <h3 className="font-display text-lg font-bold">¿Dónde deberíamos abrir después?</h3>
+          <h3 className="font-display text-lg font-bold">¿Dónde debería crecer la red?</h3>
           <p className="mx-auto mt-2 max-w-md text-sm text-stone-deep">
-            Estamos evaluando Juriquilla, Zibatá, Polanco y San Pedro.
-            Cuéntanos dónde atiendes y prioricemos tu zona.
+            Estamos evaluando las próximas sedes. Cuéntanos dónde atiendes y
+            ayúdanos a priorizar tu zona.
           </p>
           <ButtonLink href="/contact" variant="outline" size="lg" className="mt-6">
             Sugerir una zona

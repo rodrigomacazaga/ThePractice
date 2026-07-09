@@ -3,18 +3,24 @@ import Link from "next/link";
 import {
   ArrowRight,
   CalendarCheck,
+  Coffee,
   CreditCard,
   DoorOpen,
   Globe,
   KeyRound,
+  Laptop,
+  Moon,
+  Presentation,
   Search,
   ShieldCheck,
   Sparkles,
+  Users,
 } from "lucide-react";
 import { db } from "@/lib/db";
 import { safeQuery } from "@/lib/safe-query";
 import { ButtonLink } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { LogoMark } from "@/components/brand/logo";
 import { SectionHeading } from "@/components/marketing/section-heading";
 import { FloorPlanArt } from "@/components/marketing/floor-plan-art";
 import { PlanCard } from "@/components/marketing/plan-card";
@@ -32,6 +38,26 @@ const AUDIENCES = [
   "Fisioterapeutas",
   "Mindfulness",
   "Wellness",
+];
+
+// "Un día en The Practice" — el concepto explicado como experiencia, no como features.
+const DAY = [
+  { time: "08:30", icon: Coffee, text: "Llegas, entras con tu código y te preparas un café." },
+  { time: "09:00", icon: DoorOpen, text: "Primera sesión en una sala privada, lista y en silencio." },
+  { time: "11:00", icon: Laptop, text: "Trabajas entre sesiones desde el área común, sin salir del edificio." },
+  { time: "13:00", icon: Users, text: "Comes con un colega que acaba de referirte un paciente." },
+  { time: "15:00", icon: CreditCard, text: "Tu siguiente cliente reservó y pagó desde tu micrositio." },
+  { time: "18:00", icon: Presentation, text: "Impartes un taller en el studio, para tu propio grupo." },
+  { time: "20:00", icon: Moon, text: "Cierras el día. Sin renta que pagar, sin recepción que administrar." },
+];
+
+const COMMUNITY_FORMATS = [
+  { title: "Talleres", text: "Comparte tu método con colegas y clientes." },
+  { title: "Charlas", text: "Invita a un experto; nosotros difundimos." },
+  { title: "Desayunos", text: "Conversaciones antes de la primera sesión." },
+  { title: "Networking", text: "Refiere y recibe referencias de confianza." },
+  { title: "Grupos de estudio", text: "Casos, supervisión y aprendizaje continuo." },
+  { title: "Sesiones abiertas", text: "Abre tu práctica a nuevos clientes." },
 ];
 
 export default async function HomePage() {
@@ -68,12 +94,13 @@ export default async function HomePage() {
           <h1 className="mt-5 font-display text-4xl font-bold tracking-tight text-balance sm:text-5xl lg:text-6xl">
             Tu práctica privada,
             <br />
-            sin consultorio fijo.
+            con todo resuelto.
           </h1>
           <p className="mt-6 max-w-xl text-lg leading-relaxed text-stone-deep">
-            The Practice te da salas privadas premium, agenda, reservas, pagos y
-            presencia digital — toda la infraestructura para operar tu práctica
-            presencial, sin renta fija, sin mobiliario, sin recepcionista.
+            The Practice es la infraestructura física y digital para
+            profesionales independientes: espacios privados premium, agenda,
+            cobros, micrositio, directorio y comunidad. Tú te concentras en tus
+            pacientes; nosotros, en todo lo demás.
           </p>
           <div className="mt-9 flex flex-wrap gap-3">
             <ButtonLink href="/apply" size="xl">
@@ -101,117 +128,167 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* ============ PROBLEMA / SOLUCIÓN ============ */}
-      <section className="border-y border-line bg-surface">
-        <div className="container-page grid gap-12 py-20 lg:grid-cols-2 lg:gap-20">
-          <div>
-            <p className="eyebrow">El problema</p>
-            <h2 className="mt-3 font-display text-2xl font-bold tracking-tight sm:text-3xl">
-              Un consultorio propio es caro, rígido y lento.
-            </h2>
-            <ul className="mt-6 space-y-4 text-stone-deep">
-              {[
-                "Renta fija de $8,000–$25,000/mes, la uses o no.",
-                "Aval, depósito, contrato anual, mobiliario, internet, limpieza.",
-                "Un solo punto: si tu cliente vive lejos, lo pierdes.",
-                "Cero herramientas: agenda, cobros y recordatorios por WhatsApp.",
-              ].map((item) => (
-                <li key={item} className="flex gap-3 text-[15px] leading-relaxed">
-                  <span className="mt-2.5 h-1.5 w-1.5 shrink-0 rounded-full bg-rust" />
-                  {item}
-                </li>
-              ))}
-            </ul>
-          </div>
-          <div>
-            <p className="eyebrow">The Practice</p>
-            <h2 className="mt-3 font-display text-2xl font-bold tracking-tight sm:text-3xl">
-              Paga por lo que usas. Todo lo demás ya está resuelto.
-            </h2>
-            <ul className="mt-6 space-y-4 text-stone-deep">
-              {[
-                "Salas privadas premium por hora, paquete o membresía.",
-                "Diseño, mobiliario, limpieza, WiFi y operación incluidos.",
-                "Micrositio, directorio, reservas y cobros online.",
-                "Una red de ubicaciones: atiende donde están tus clientes.",
-              ].map((item) => (
-                <li key={item} className="flex gap-3 text-[15px] leading-relaxed">
-                  <span className="mt-2.5 h-1.5 w-1.5 shrink-0 rounded-full bg-sage" />
-                  {item}
-                </li>
-              ))}
-            </ul>
+      {/* ============ ¿QUÉ ES THE PRACTICE? (concepto en 15 segundos) ============ */}
+      <section className="border-y border-line bg-surface py-20 lg:py-28">
+        <div className="container-page">
+          <SectionHeading
+            eyebrow="¿Qué es The Practice?"
+            title="Toda la infraestructura de tu práctica, en un solo lugar."
+            description="No es renta de consultorios ni coworking. Es dónde lanzas, operas y haces crecer tu práctica privada — con los espacios, la tecnología y la comunidad ya resueltos."
+            align="center"
+          />
+
+          <div className="mx-auto mt-14 flex max-w-5xl flex-col items-stretch gap-4 lg:flex-row lg:items-center">
+            {/* Antes */}
+            <div className="flex-1 rounded-2xl border border-line bg-paper p-7">
+              <p className="eyebrow">Consultorio tradicional</p>
+              <ul className="mt-5 space-y-3">
+                {[
+                  "Renta fija, la uses o no",
+                  "Mobiliario, recepción y servicios",
+                  "Una sola ubicación",
+                  "Todo lo administras tú",
+                ].map((item) => (
+                  <li key={item} className="flex gap-2.5 text-sm leading-relaxed text-stone-deep">
+                    <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-line-strong" />
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <ArrowRight className="mx-auto h-5 w-5 shrink-0 rotate-90 text-clay lg:rotate-0" />
+
+            {/* El puente: The Practice */}
+            <div className="flex-1 rounded-2xl border border-ink bg-ink p-7 text-center text-paper shadow-(--shadow-lift)">
+              <LogoMark tone="paper" className="mx-auto h-9 w-9" />
+              <p className="mt-4 font-display text-xl font-bold tracking-tight">The Practice</p>
+              <span className="mx-auto mt-4 block h-px w-10 bg-clay" />
+              <p className="mt-4 text-sm leading-relaxed text-paper/65">
+                La infraestructura de tu práctica, resuelta.
+              </p>
+            </div>
+
+            <ArrowRight className="mx-auto h-5 w-5 shrink-0 rotate-90 text-clay lg:rotate-0" />
+
+            {/* Después */}
+            <div className="flex-1 rounded-2xl border border-line-strong bg-surface p-7 shadow-(--shadow-card)">
+              <p className="eyebrow text-clay-deep">Tu práctica, moderna</p>
+              <ul className="mt-5 space-y-3">
+                {[
+                  "Pagas solo por lo que usas",
+                  "Espacios premium, listos para atender",
+                  "Micrositio, directorio y cobros online",
+                  "Comunidad y una red que crece contigo",
+                ].map((item) => (
+                  <li key={item} className="flex gap-2.5 text-sm leading-relaxed text-ink-mute">
+                    <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-sage" />
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* ============ CÓMO FUNCIONA ============ */}
+      {/* ============ UN DÍA EN THE PRACTICE (la experiencia) ============ */}
       <section className="container-page py-20 lg:py-28">
         <SectionHeading
-          eyebrow="Cómo funciona"
-          title="De aplicación a primera sesión en días, no meses."
+          eyebrow="Un día en The Practice"
+          title="Así se siente tener tu práctica aquí."
+          description="Sin manuales ni configuraciones. Solo tu práctica, funcionando."
           align="center"
         />
-        <div className="mt-14 grid gap-6 sm:grid-cols-3">
-          {[
-            {
-              icon: ShieldCheck,
-              step: "01",
-              title: "Aplica y verifica tu perfil",
-              text: "Cuéntanos de tu práctica. Verificamos credenciales para mantener una comunidad profesional y curada.",
-            },
-            {
-              icon: CalendarCheck,
-              step: "02",
-              title: "Elige plan y reserva salas",
-              text: "Por hora, paquete de horas o membresía mensual con horas incluidas. Reserva desde tu panel en segundos.",
-            },
-            {
-              icon: KeyRound,
-              step: "03",
-              title: "Atiende y crece",
-              text: "Llega, ingresa con tu código y atiende. Tu micrositio y el directorio te traen nuevos clientes.",
-            },
-          ].map((item) => (
-            <div
-              key={item.step}
-              className="rounded-2xl border border-line bg-surface p-7 shadow-(--shadow-card)"
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-ink text-paper">
-                  <item.icon className="h-5 w-5" strokeWidth={1.75} />
+        <div className="mx-auto mt-14 max-w-2xl">
+          {DAY.map((moment, i) => (
+            <div key={moment.time} className="flex gap-5">
+              {/* Columna tiempo + línea */}
+              <div className="flex flex-col items-center">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-ink text-paper">
+                  <moment.icon className="h-4.5 w-4.5" strokeWidth={1.75} />
                 </div>
-                <span className="font-display text-3xl font-bold text-line-strong">
-                  {item.step}
-                </span>
+                {i < DAY.length - 1 && <span className="my-1 w-px flex-1 bg-line-strong" />}
               </div>
-              <h3 className="mt-5 font-display text-lg font-bold tracking-tight">{item.title}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-stone-deep">{item.text}</p>
+              {/* Contenido */}
+              <div className={i < DAY.length - 1 ? "pb-8" : ""}>
+                <p className="font-display text-sm font-bold tracking-tight text-clay-deep">
+                  {moment.time}
+                </p>
+                <p className="mt-1 text-[15px] leading-relaxed text-ink-mute">{moment.text}</p>
+              </div>
             </div>
           ))}
         </div>
       </section>
 
-      {/* ============ SALAS ============ */}
+      {/* ============ CÓMO FUNCIONA (cómo empiezas) ============ */}
+      <section className="border-y border-line bg-surface py-20 lg:py-28">
+        <div className="container-page">
+          <SectionHeading
+            eyebrow="Cómo empezar"
+            title="De aplicación a primera sesión en días, no meses."
+            align="center"
+          />
+          <div className="mt-14 grid gap-6 sm:grid-cols-3">
+            {[
+              {
+                icon: ShieldCheck,
+                step: "01",
+                title: "Aplica y verifica tu perfil",
+                text: "Cuéntanos de tu práctica. Verificamos credenciales para mantener una comunidad profesional y curada.",
+              },
+              {
+                icon: CalendarCheck,
+                step: "02",
+                title: "Elige tu membresía",
+                text: "Acceso a espacios, tecnología y comunidad. Reserva salas desde tu panel en segundos.",
+              },
+              {
+                icon: KeyRound,
+                step: "03",
+                title: "Atiende y crece",
+                text: "Llega, ingresa con tu código y atiende. Tu micrositio y el directorio te traen nuevos clientes.",
+              },
+            ].map((item) => (
+              <div
+                key={item.step}
+                className="rounded-2xl border border-line bg-paper p-7 shadow-(--shadow-card)"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-ink text-paper">
+                    <item.icon className="h-5 w-5" strokeWidth={1.75} />
+                  </div>
+                  <span className="font-display text-3xl font-bold text-line-strong">
+                    {item.step}
+                  </span>
+                </div>
+                <h3 className="mt-5 font-display text-lg font-bold tracking-tight">{item.title}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-stone-deep">{item.text}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ============ ESPACIOS (consecuencia del concepto, no el concepto) ============ */}
       {roomTypes.length > 0 && (
-        <section className="border-y border-line bg-surface py-20 lg:py-28">
-          <div className="container-page">
-            <div className="flex flex-wrap items-end justify-between gap-6">
-              <SectionHeading
-                eyebrow="Los espacios"
-                title="Seis tipos de sala. Un mismo estándar."
-                description="Terapia, consulta, sesiones premium, masaje, movimiento y talleres. Privacidad acústica, luz cálida y mobiliario de calidad en todas."
-              />
-              <ButtonLink href="/rooms" variant="outline">
-                Ver todas las salas
-                <ArrowRight className="h-4 w-4" />
-              </ButtonLink>
-            </div>
-            <div className="mt-12 grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
-              {roomTypes.map((rt) => (
-                <RoomTypeCard key={rt.id} roomType={rt} />
-              ))}
-            </div>
+        <section className="container-page py-20 lg:py-28">
+          <div className="flex flex-wrap items-end justify-between gap-6">
+            <SectionHeading
+              eyebrow="Los espacios"
+              title="Un espacio para cada forma de ejercer."
+              description="Las salas son solo una parte de The Practice — pero están pensadas al detalle. Seis tipos de espacio para terapia, consulta, sesiones premium, masaje, movimiento y talleres."
+            />
+            <ButtonLink href="/rooms" variant="outline">
+              Ver todos los espacios
+              <ArrowRight className="h-4 w-4" />
+            </ButtonLink>
+          </div>
+          <div className="mt-12 grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
+            {roomTypes.map((rt) => (
+              <RoomTypeCard key={rt.id} roomType={rt} />
+            ))}
           </div>
         </section>
       )}
@@ -244,13 +321,13 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* ============ MEMBRESÍAS ============ */}
+      {/* ============ MEMBRESÍAS (acceso, no horas) ============ */}
       {plans.length > 0 && (
         <section className="container-page py-20 lg:py-28">
           <SectionHeading
             eyebrow="Membresías"
-            title="Un plan para cada etapa de tu práctica."
-            description="Empieza pagando por hora y escala a horas incluidas, micrositio y horarios fijos garantizados."
+            title="Una membresía es acceso, no renta de horas."
+            description="Acceso a espacios premium, tecnología, comunidad, visibilidad y a toda la red de The Practice. Las horas de sala vienen incluidas."
             align="center"
           />
           <div className="mt-14 grid gap-6 md:grid-cols-2 xl:grid-cols-4">
@@ -264,6 +341,60 @@ export default async function HomePage() {
               Conoce los precios founder →
             </Link>
           </p>
+        </section>
+      )}
+
+      {/* ============ COMUNIDAD (autoorganizada) ============ */}
+      <section className="border-y border-line bg-surface py-20 lg:py-28">
+        <div className="container-page grid items-start gap-12 lg:grid-cols-[0.9fr_1.1fr] lg:gap-16">
+          <div className="lg:sticky lg:top-24">
+            <SectionHeading
+              eyebrow="La comunidad"
+              title="La comunidad la construyen sus miembros."
+              description="Ejercer por tu cuenta no significa hacerlo en soledad. The Practice no organiza los eventos: pone el espacio, la difusión y las herramientas para que los profesionales creen los suyos."
+            />
+            <div className="mt-8 flex flex-wrap gap-2">
+              <Badge variant="default" size="md">The Practice pone el espacio</Badge>
+              <Badge variant="default" size="md">la difusión</Badge>
+              <Badge variant="default" size="md">la infraestructura</Badge>
+              <Badge variant="clay" size="md">Los miembros ponen el contenido</Badge>
+            </div>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            {COMMUNITY_FORMATS.map((f) => (
+              <div key={f.title} className="rounded-2xl border border-line bg-paper p-6">
+                <h3 className="font-display text-sm font-bold">{f.title}</h3>
+                <p className="mt-1.5 text-sm leading-relaxed text-stone-deep">{f.text}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ============ THE PRACTICE NETWORK ============ */}
+      {locations.length > 0 && (
+        <section className="container-page py-20 lg:py-28">
+          <div className="flex flex-wrap items-end justify-between gap-6">
+            <SectionHeading
+              eyebrow="The Practice Network"
+              title="No abrimos sucursales. Construimos una red."
+              description="The Practice nació para ser una red de espacios para profesionales independientes. Empieza en Querétaro y crece ciudad por ciudad — una sola membresía, en toda la red."
+            />
+            <ButtonLink href="/locations" variant="outline">
+              Conocer la red
+              <ArrowRight className="h-4 w-4" />
+            </ButtonLink>
+          </div>
+          <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {locations.map((location) => (
+              <LocationCard
+                key={location.id}
+                location={location}
+                roomCount={location._count.rooms}
+                founding={location.slug === "la-ceiba"}
+              />
+            ))}
+          </div>
         </section>
       )}
 
@@ -311,42 +442,16 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* ============ UBICACIONES ============ */}
-      {locations.length > 0 && (
-        <section className="container-page py-20 lg:py-28">
-          <div className="flex flex-wrap items-end justify-between gap-6">
-            <SectionHeading
-              eyebrow="Ubicaciones"
-              title="Una red que crece contigo."
-              description="Empezamos en Querétaro. Cada nueva ubicación amplía tu alcance sin duplicar tus costos."
-            />
-            <ButtonLink href="/locations" variant="outline">
-              Ver ubicaciones
-              <ArrowRight className="h-4 w-4" />
-            </ButtonLink>
-          </div>
-          <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {locations.map((location) => (
-              <LocationCard
-                key={location.id}
-                location={location}
-                roomCount={location._count.rooms}
-              />
-            ))}
-          </div>
-        </section>
-      )}
-
       {/* ============ CTA FINAL ============ */}
       <section className="bg-ink">
         <div className="container-page py-20 text-center lg:py-28">
-          <p className="eyebrow-light">Membresías founder · The Practice La Ceiba</p>
+          <p className="eyebrow-light">Founding Location · The Practice La Ceiba</p>
           <h2 className="mx-auto mt-4 max-w-2xl font-display text-3xl font-bold tracking-tight text-paper text-balance sm:text-4xl lg:text-5xl">
-            Abre tu práctica en La Ceiba sin firmar un contrato de renta.
+            Sé parte de la primera sede de la red.
           </h2>
           <p className="mx-auto mt-5 max-w-xl text-lg text-paper/60">
-            Cupo limitado de practitioners fundadores con precio preferente de
-            por vida.
+            Cupo limitado de practitioners fundadores en La Ceiba, con precio
+            preferente de por vida.
           </p>
           <div className="mt-9 flex flex-wrap justify-center gap-3">
             <ButtonLink href="/la-ceiba" variant="light" size="xl">
