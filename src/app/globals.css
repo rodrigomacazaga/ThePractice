@@ -171,20 +171,27 @@
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
-  /* Margen superior generoso: cualquier elemento que caiga al inicio de una
-     página (título, tarjeta o imagen) conserva aire arriba de forma uniforme. */
+  /* Margen de página para el caso normal. OJO: este margen es FRÁGIL — el
+     usuario puede anularlo con "Márgenes: Ninguno" en el diálogo de impresión.
+     Por eso el aire real de cada sección se da abajo con padding, no aquí. */
   @page {
-    margin: 20mm 16mm 16mm;
+    margin: 14mm;
   }
-  /* Cada sección viaja como un bloque coherente: su encabezado, texto, viñetas
-     y foto no se separan entre páginas. Esto evita que una foto quede huérfana
-     —sola al inicio de una hoja, lejos de su título— como pasaba con la sección
-     04. Las 9 secciones caben dentro de una página A4, así que ninguna se parte
-     por ser demasiado alta; si en el futuro alguna creciera de más, el navegador
-     la fragmenta igual (nunca se recorta contenido). */
+  /* Cada sección viaja como un bloque coherente (no se parte entre páginas) Y
+     lleva su propio aire arriba como PADDING. A diferencia del margen @page o de
+     un margin-top (que se trunca al inicio de página), el padding SIEMPRE
+     renderiza —aunque el usuario imprima con "Márgenes: Ninguno"—, así que el
+     título/tarjeta/foto que abre una página nunca queda pegado al borde.
+     Se anula el margin-top de pantalla (mt-16) para no duplicar el espacio. */
   main > section {
     break-inside: avoid;
     page-break-inside: avoid; /* legacy — Safari/WebKit y navegadores viejos */
+    margin-top: 0 !important;
+    padding-top: 14mm;
+  }
+  /* La portada no necesita el padding: ya abre con el aire del <main>. */
+  main > section:first-child {
+    padding-top: 0;
   }
   /* Refuerzo: los títulos no se quedan solos al final de página y las
      imágenes/tarjetas no se parten entre hojas. Se incluyen las propiedades

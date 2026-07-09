@@ -326,28 +326,33 @@ export default function ConceptLaCeibaPage() {
           </div>
         </section>
 
-        {/* ============ CIERRE ============ */}
-        <section className="mt-16 break-inside-avoid rounded-2xl bg-ink p-8 text-paper sm:p-12">
-          <div className="flex items-center gap-2.5">
-            <LogoMark tone="paper" />
-            <Wordmark tone="paper" />
-          </div>
-          <h2 className="mt-8 max-w-2xl font-display text-2xl font-bold tracking-tight text-balance sm:text-3xl">
-            Nuestra intención es establecer en La Ceiba la primera ubicación de
-            The Practice.
-          </h2>
-          <p className="mt-5 max-w-2xl text-[15px] leading-relaxed text-paper/70">
-            Un proyecto con una operación seria, una estética cuidada y un
-            concepto que aporte valor a la plaza y a su comunidad de usuarios.
-            Quedamos atentos para ampliar cualquier punto operativo, técnico o de
-            adecuación requerido durante el proceso de arrendamiento.
-          </p>
-          <div className="mt-8 border-t border-paper/15 pt-6">
-            <p className="eyebrow-light">Contacto</p>
-            <div className="mt-3 flex flex-wrap gap-x-8 gap-y-1.5 text-sm text-paper/80">
-              <span>{site.email}</span>
-              <span>{site.phone}</span>
-              <span>{site.domain}</span>
+        {/* ============ CIERRE ============
+             La sección es un envoltorio TRANSPARENTE; el fondo negro va en el div
+             interno. Así el padding-top de impresión da aire (beige) ARRIBA de la
+             tarjeta, no dentro de ella. */}
+        <section className="mt-16">
+          <div className="break-inside-avoid rounded-2xl bg-ink p-8 text-paper sm:p-12">
+            <div className="flex items-center gap-2.5">
+              <LogoMark tone="paper" />
+              <Wordmark tone="paper" />
+            </div>
+            <h2 className="mt-8 max-w-2xl font-display text-2xl font-bold tracking-tight text-balance sm:text-3xl">
+              Nuestra intención es establecer en La Ceiba la primera ubicación de
+              The Practice.
+            </h2>
+            <p className="mt-5 max-w-2xl text-[15px] leading-relaxed text-paper/70">
+              Un proyecto con una operación seria, una estética cuidada y un
+              concepto que aporte valor a la plaza y a su comunidad de usuarios.
+              Quedamos atentos para ampliar cualquier punto operativo, técnico o de
+              adecuación requerido durante el proceso de arrendamiento.
+            </p>
+            <div className="mt-8 border-t border-paper/15 pt-6">
+              <p className="eyebrow-light">Contacto</p>
+              <div className="mt-3 flex flex-wrap gap-x-8 gap-y-1.5 text-sm text-paper/80">
+                <span>{site.email}</span>
+                <span>{site.phone}</span>
+                <span>{site.domain}</span>
+              </div>
             </div>
           </div>
         </section>
