@@ -324,7 +324,7 @@ export default async function LaCeibaLandingPage() {
           <SectionHeading
             eyebrow="Los espacios"
             title="Un espacio para cada tipo de sesión."
-            description="Salas para terapia individual, parejas, familias, consulta profesional, nutrición, masaje o wellness, y talleres o sesiones grupales."
+            description="Salas para terapia individual, parejas, consulta profesional, nutrición, masaje o wellness, sesiones online y talleres o sesiones grupales."
           />
           <div className="mt-12 grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
             {roomTypes.map((rt) => (

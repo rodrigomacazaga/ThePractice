@@ -114,15 +114,15 @@ function RoomPlan({ code }: { code: string }) {
       </svg>
     );
   }
-  if (code === "family") {
-    // Dos asientos adultos, uno infantil y área de juego en acento.
+  if (code === "online") {
+    // Escritorio con pantalla, asiento único y luz de video en acento.
     return (
       <svg viewBox="0 0 120 80" className="h-24 w-40 opacity-90" fill="none">
         <rect x="4" y="4" width="112" height="72" rx="10" stroke={stroke} strokeWidth="2" opacity="0.5" />
-        <circle cx="34" cy="32" r="9" stroke={stroke} strokeWidth="2.5" />
-        <circle cx="58" cy="32" r="9" stroke={stroke} strokeWidth="2.5" />
-        <circle cx="46" cy="58" r="6" stroke={stroke} strokeWidth="2" />
-        <rect x="82" y="24" width="24" height="32" rx="5" stroke={accent} strokeWidth="2.5" />
+        <rect x="34" y="26" width="52" height="12" rx="4" stroke={stroke} strokeWidth="2.5" />
+        <rect x="50" y="14" width="20" height="6" rx="3" stroke={stroke} strokeWidth="2" />
+        <circle cx="60" cy="56" r="8" stroke={stroke} strokeWidth="2.5" />
+        <circle cx="94" cy="20" r="6" fill={accent} />
       </svg>
     );
   }
