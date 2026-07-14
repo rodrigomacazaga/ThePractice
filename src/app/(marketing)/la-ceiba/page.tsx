@@ -29,7 +29,7 @@ import { WHATSAPP_QUESTIONS_MESSAGE } from "@/lib/whatsapp";
 
 export const dynamic = "force-dynamic";
 
-const TITLE = "Consultorios privados por hora en Querétaro | The Practice La Ceiba";
+const TITLE = "Consultorios y espacios privados por hora en Querétaro | The Practice La Ceiba";
 const DESCRIPTION =
   "Espacios privados y equipados para psicólogos, terapeutas, nutriólogos, coaches y profesionales independientes en Plaza La Ceiba, Querétaro. Conoce las membresías Founder.";
 
@@ -62,7 +62,7 @@ const PROFESSIONS = [
 ];
 
 const PROBLEMS = [
-  "Pagas una renta fija aunque no uses el consultorio todos los días.",
+  "Pagas renta fija aunque solo atiendas unos días a la semana.",
   "Inviertes en mobiliario, recepción, internet y mantenimiento por tu cuenta.",
   "Atiendes en lugares improvisados que no reflejan tu nivel profesional.",
   "No tienes presencia digital ni un sistema de reservaciones propio.",
@@ -232,11 +232,11 @@ export default async function LaCeibaLandingPage() {
               </Badge>
             </div>
             <h1 className="mt-6 font-display text-4xl font-bold tracking-tight text-balance sm:text-5xl lg:text-6xl">
-              Estrena consultorio sin pagar renta fija.
+              Atiende en un espacio a tu altura, sin pagar renta fija.
             </h1>
             <p className="mt-6 max-w-xl text-lg leading-relaxed text-paper/65">
-              Consultorios privados, equipados y listos para atender en Plaza
-              La Ceiba. Pagas por hora o con membresía — con recepción,
+              Espacios privados, equipados y listos para atender en Plaza La
+              Ceiba. Pagas por hora o con membresía — con recepción,
               reservaciones digitales, micrositio y comunidad incluidos.
             </p>
             <div className="mt-9 flex flex-wrap gap-3">
@@ -268,7 +268,7 @@ export default async function LaCeibaLandingPage() {
             <div className="relative aspect-[3/2] overflow-hidden rounded-2xl shadow-(--shadow-lift)">
               <Image
                 src="/images/room-talk.jpg"
-                alt="Talk Room: consultorio privado para terapia en The Practice La Ceiba"
+                alt="Talk Room: sala privada para atender en The Practice La Ceiba"
                 fill
                 priority
                 sizes="(max-width: 1024px) 100vw, 45vw"
@@ -287,7 +287,7 @@ export default async function LaCeibaLandingPage() {
         <div className="container-page">
           <SectionHeading
             eyebrow="El problema"
-            title="Ejercer por tu cuenta no debería costarte un consultorio vacío."
+            title="Ejercer por tu cuenta no debería costarte un espacio vacío."
             description="Ni coworking genérico ni renta tradicional de oficinas: The Practice es infraestructura física y digital para profesionales independientes."
             align="center"
           />
@@ -405,13 +405,13 @@ export default async function LaCeibaLandingPage() {
         <div className="container-page">
           <SectionHeading
             eyebrow="La comparación"
-            title="Consultorio tradicional vs. The Practice."
+            title="Rentar tu propio espacio vs. The Practice."
             description="Sin cifras infladas: compara lo que asumes en cada modelo."
             align="center"
           />
           <div className="mx-auto mt-14 flex max-w-4xl flex-col items-stretch gap-4 lg:flex-row">
             <div className="flex-1 rounded-2xl border border-line bg-paper p-7">
-              <p className="eyebrow">Consultorio tradicional</p>
+              <p className="eyebrow">Consultorio u oficina en renta</p>
               <ul className="mt-5 space-y-3">
                 {TRADITIONAL.map((item) => (
                   <li key={item} className="flex gap-2.5 text-sm leading-relaxed text-stone-deep">
