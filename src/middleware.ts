@@ -21,6 +21,17 @@ function isPublic(pathname: string): boolean {
 }
 
 export function middleware(req: NextRequest) {
+  // La raíz redirige (temporalmente) a la landing comercial de La Ceiba,
+  // destino de las campañas. 307 (no 308): más adelante "/" puede volver a
+  // ser la página institucional. El clone conserva los query params
+  // (utm_*, fbclid, gclid) tal cual. Solo aplica a "/" exacto — /la-ceiba
+  // nunca vuelve a entrar aquí, así que no hay loop.
+  if (req.nextUrl.pathname === "/") {
+    const url = req.nextUrl.clone();
+    url.pathname = "/la-ceiba";
+    return NextResponse.redirect(url, 307);
+  }
+
   const password = process.env.SITE_PASSWORD;
   if (!password) return NextResponse.next();
 

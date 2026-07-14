@@ -39,6 +39,7 @@ export const footerNav = {
     { label: "Preguntas frecuentes", href: "/faq" },
   ],
   empresa: [
+    { label: "¿Qué es The Practice?", href: "/the-practice" },
     { label: "Nosotros", href: "/about" },
     { label: "Contacto", href: "/contact" },
   ],
