@@ -226,6 +226,8 @@ model Room {
   name              String // "Talk 01"
   slug              String
   description       String?
+  widthMeters       Float? // ancho en metros
+  lengthMeters      Float? // largo en metros
   hourlyPriceCentsOverride Int? // override del precio base del tipo
   amenities         String[]
   photos            String[]

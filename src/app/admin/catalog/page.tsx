@@ -1,15 +1,112 @@
 import { Plus } from "lucide-react";
-import type { RoomType } from "@prisma/client";
+import type { MembershipPlan, RoomType } from "@prisma/client";
 import { requireAdmin } from "@/lib/auth-helpers";
 import { db } from "@/lib/db";
 import { formatCredits, formatMXN } from "@/lib/utils";
 import { PageHeader } from "@/components/dashboard/shell";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Field, Input, Textarea } from "@/components/ui/form";
+import { Field, Input, Select, Textarea } from "@/components/ui/form";
 import { Modal } from "@/components/ui/modal";
-import { ActionForm } from "@/components/dashboard/action-form";
-import { updatePlanPricing, updateRoomTypePricing, upsertRoomType } from "../actions";
+import { ActionForm, ActionButton } from "@/components/dashboard/action-form";
+import {
+  deletePlan,
+  updatePlanPricing,
+  updateRoomTypePricing,
+  upsertPlan,
+  upsertRoomType,
+} from "../actions";
+
+const MICROSITE_TIERS = ["BASIC", "PRO", "PREMIUM", "FEATURED"] as const;
+
+/** Atributos de un plan (precios y horas incluidas van en su form dedicado). */
+function PlanAttributeFields({ plan, uid: uidProp }: { plan?: MembershipPlan; uid?: string }) {
+  const uid = uidProp ?? plan?.id ?? "new";
+  return (
+    <>
+      {plan && <input type="hidden" name="planId" value={plan.id} />}
+      <div className="grid gap-3 sm:grid-cols-2">
+        <Field label="Nombre" htmlFor={`pl-name-${uid}`}>
+          <Input id={`pl-name-${uid}`} name="name" required defaultValue={plan?.name} />
+        </Field>
+        <Field label="Tagline" htmlFor={`pl-tag-${uid}`}>
+          <Input id={`pl-tag-${uid}`} name="tagline" defaultValue={plan?.tagline ?? ""} />
+        </Field>
+      </div>
+      <div className="mt-3">
+        <Field label="Features (separadas por coma)" htmlFor={`pl-feat-${uid}`}>
+          <Textarea
+            id={`pl-feat-${uid}`}
+            name="features"
+            rows={2}
+            defaultValue={plan?.features.join(", ")}
+          />
+        </Field>
+      </div>
+      <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <Field label="Rollover máx (h)" htmlFor={`pl-roll-${uid}`}>
+          <Input
+            id={`pl-roll-${uid}`}
+            name="rolloverLimit"
+            type="number"
+            min={0}
+            step="0.5"
+            defaultValue={plan?.rolloverLimit ?? 0}
+          />
+        </Field>
+        <Field label="Horas de Studio" htmlFor={`pl-studio-${uid}`}>
+          <Input
+            id={`pl-studio-${uid}`}
+            name="studioHoursIncluded"
+            type="number"
+            min={0}
+            step="0.5"
+            defaultValue={plan?.studioHoursIncluded ?? 0}
+          />
+        </Field>
+        <Field label="Micrositio" htmlFor={`pl-tier-${uid}`}>
+          <Select id={`pl-tier-${uid}`} name="micrositeTier" defaultValue={plan?.micrositeTier ?? "BASIC"}>
+            {MICROSITE_TIERS.map((t) => (
+              <option key={t} value={t}>
+                {t}
+              </option>
+            ))}
+          </Select>
+        </Field>
+        <Field label="Orden" htmlFor={`pl-sort-${uid}`}>
+          <Input
+            id={`pl-sort-${uid}`}
+            name="sort"
+            type="number"
+            min={0}
+            defaultValue={plan?.sort ?? 0}
+          />
+        </Field>
+      </div>
+      <div className="mt-4 grid grid-cols-2 gap-2 text-sm font-medium sm:grid-cols-3">
+        {(
+          [
+            ["highlighted", "Destacado (Popular)", plan?.highlighted ?? false],
+            ["primeAccess", "Horarios prime", plan?.primeAccess ?? false],
+            ["premiumRoomAccess", "Acceso a Premium", plan?.premiumRoomAccess ?? false],
+            ["includesLocker", "Locker incluido", plan?.includesLocker ?? false],
+            ["active", "Activo (visible)", plan?.active ?? true],
+          ] as const
+        ).map(([name, label, checked]) => (
+          <label key={name} className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              name={name}
+              defaultChecked={checked}
+              className="h-4 w-4 accent-clay"
+            />
+            {label}
+          </label>
+        ))}
+      </div>
+    </>
+  );
+}
 
 /** Atributos de un tipo de sala (los precios van en su formulario dedicado). */
 function RoomTypeAttributeFields({ rt, uid: uidProp }: { rt?: RoomType; uid?: string }) {
@@ -126,6 +223,11 @@ export default async function AdminCatalogPage() {
                     Popular
                   </Badge>
                 )}
+                {!plan.active && (
+                  <Badge variant="default" className="ml-2">
+                    Inactivo
+                  </Badge>
+                )}
               </CardTitle>
               <span className="text-xs text-stone">
                 {formatMXN(plan.monthlyPriceCents)}/mes ·{" "}
@@ -168,9 +270,66 @@ export default async function AdminCatalogPage() {
                   </Field>
                 </div>
               </ActionForm>
+
+              <div className="mt-5 flex items-center gap-3 border-t border-line pt-4">
+                <Modal trigger="Editar plan" title={`Editar ${plan.name}`}>
+                  <ActionForm action={upsertPlan} submitLabel="Guardar cambios">
+                    <PlanAttributeFields plan={plan} />
+                  </ActionForm>
+                </Modal>
+                <ActionButton
+                  action={deletePlan.bind(null, plan.id)}
+                  label="Eliminar"
+                  variant="danger"
+                  confirmText={`¿Eliminar el plan "${plan.name}"? Si nadie lo ha contratado se borra definitivamente; si tiene membresías solo se desactiva.`}
+                />
+              </div>
             </CardContent>
           </Card>
         ))}
+
+        {/* Nuevo plan */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Plus className="h-4.5 w-4.5 text-clay" /> Nuevo plan
+            </CardTitle>
+            <CardDescription>
+              El código es la llave interna (minúsculas y guiones, ej.{" "}
+              <span className="font-mono">starter</span>) y no se puede cambiar después.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ActionForm action={upsertPlan} submitLabel="Crear plan">
+              <div className="grid gap-3 sm:grid-cols-3">
+                <Field label="Código" htmlFor="pl-code-new">
+                  <Input id="pl-code-new" name="code" required placeholder="starter" />
+                </Field>
+                <Field label="Precio/mes (MXN)" htmlFor="pl-mp-new">
+                  <Input id="pl-mp-new" name="monthlyPrice" type="number" min={0} required />
+                </Field>
+                <Field label="Precio founder" htmlFor="pl-fp-new">
+                  <Input id="pl-fp-new" name="founderPrice" type="number" min={0} />
+                </Field>
+              </div>
+              <div className="mt-3 grid gap-3 sm:grid-cols-3">
+                <Field label="Horas incluidas" htmlFor="pl-cr-new">
+                  <Input
+                    id="pl-cr-new"
+                    name="includedCredits"
+                    type="number"
+                    min={0}
+                    step="0.5"
+                    required
+                  />
+                </Field>
+              </div>
+              <div className="mt-3">
+                <PlanAttributeFields uid="new-plan" />
+              </div>
+            </ActionForm>
+          </CardContent>
+        </Card>
       </div>
 
       {/* TIPOS DE SALA — viven dentro de cada establecimiento */}

@@ -6,6 +6,7 @@ import { formatCredits, formatMXN } from "@/lib/utils";
 import { PageHeader } from "@/components/dashboard/shell";
 import { Badge } from "@/components/ui/badge";
 import { Table, THead, TBody, TR, TH, TD } from "@/components/ui/table";
+import { Tabs } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Field, Input, Textarea, Select } from "@/components/ui/form";
 import { ActionForm, ActionButton } from "@/components/dashboard/action-form";
@@ -59,8 +60,28 @@ function RoomFields({
           />
         </Field>
       </div>
-      <div className="mt-3">
-        <Field label="Precio/hora override (MXN, vacío = precio del tipo)" htmlFor={`po-${uid}`}>
+      <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
+        <Field label="Ancho (m)" htmlFor={`wm-${uid}`}>
+          <Input
+            id={`wm-${uid}`}
+            name="widthMeters"
+            type="number"
+            min={0.5}
+            step="0.1"
+            defaultValue={room?.widthMeters ?? ""}
+          />
+        </Field>
+        <Field label="Largo (m)" htmlFor={`lm-${uid}`}>
+          <Input
+            id={`lm-${uid}`}
+            name="lengthMeters"
+            type="number"
+            min={0.5}
+            step="0.1"
+            defaultValue={room?.lengthMeters ?? ""}
+          />
+        </Field>
+        <Field label="Precio/hora override (MXN)" htmlFor={`po-${uid}`}>
           <Input
             id={`po-${uid}`}
             name="priceOverride"
@@ -117,20 +138,21 @@ export default async function AdminRoomsPage() {
         description="Inventario por establecimiento. Cada sala pertenece a un tipo de sala de su ubicación; los precios base se configuran por tipo en Planes y precios."
       />
 
-      {locations.map((loc) => (
-        <section key={loc.id} className="mb-12">
-          <h2 className="eyebrow">
-            {loc.shortName} · {loc.rooms.length}{" "}
-            {loc.rooms.length === 1 ? "sala" : "salas"}
-          </h2>
-
+      <Tabs
+        tabs={locations.map((loc) => ({
+          id: loc.id,
+          label: `${loc.shortName} · ${loc.rooms.length}`,
+        }))}
+        panels={locations.map((loc) => (
+        <section key={loc.id}>
           {loc.rooms.length > 0 && (
-            <div className="mt-4">
+            <div>
               <Table>
                 <THead>
                   <TR>
                     <TH>Sala</TH>
                     <TH>Tipo</TH>
+                    <TH className="text-right">Tamaño</TH>
                     <TH className="text-right">Precio/hora</TH>
                     <TH className="text-right">Créditos/h</TH>
                     <TH className="text-right">Reservas</TH>
@@ -145,6 +167,11 @@ export default async function AdminRoomsPage() {
                       <TR key={room.id}>
                         <TD className="font-display font-bold">{room.name}</TD>
                         <TD>{room.roomType.name}</TD>
+                        <TD className="text-right whitespace-nowrap">
+                          {room.widthMeters != null && room.lengthMeters != null
+                            ? `${room.widthMeters} × ${room.lengthMeters} m`
+                            : "—"}
+                        </TD>
                         <TD className="text-right">
                           {formatMXN(
                             room.hourlyPriceCentsOverride ?? room.roomType.baseHourlyPriceCents
@@ -233,7 +260,8 @@ export default async function AdminRoomsPage() {
             )}
           </div>
         </section>
-      ))}
+        ))}
+      />
     </>
   );
 }

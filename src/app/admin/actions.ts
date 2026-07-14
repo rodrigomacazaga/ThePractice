@@ -352,6 +352,135 @@ export async function updateBookingSettings(formData: FormData) {
 }
 
 // ------------------------------------------------------------
+// Planes de membresía: alta, edición y baja
+// ------------------------------------------------------------
+
+const planSchema = z.object({
+  planId: z.string().optional(),
+  code: z
+    .string()
+    .regex(/^[a-z0-9-]{2,24}$/, "minúsculas, números y guiones")
+    .optional(),
+  name: z.string().min(2).max(40),
+  tagline: z.string().max(120).optional(),
+  monthlyPrice: z.coerce.number().min(0).max(1000000).optional(),
+  founderPrice: z.coerce.number().min(0).max(1000000).optional(),
+  includedCredits: z.coerce.number().min(0).max(500).optional(),
+  rolloverLimit: z.coerce.number().min(0).max(500),
+  studioHoursIncluded: z.coerce.number().min(0).max(100),
+  micrositeTier: z.enum(["BASIC", "PRO", "PREMIUM", "FEATURED"]),
+  sort: z.coerce.number().int().min(0).max(999),
+});
+
+/**
+ * Alta y edición de atributos de planes. El código es inmutable tras crear.
+ * Precios y créditos incluidos de planes existentes se editan en su
+ * formulario dedicado (updatePlanPricing) para no pisarse entre sí.
+ */
+export async function upsertPlan(formData: FormData) {
+  const session = await requireAdmin();
+  const parsed = planSchema.safeParse({
+    planId: formData.get("planId") || undefined,
+    code: formData.get("code") || undefined,
+    name: formData.get("name"),
+    tagline: formData.get("tagline") || undefined,
+    monthlyPrice: formData.get("monthlyPrice") || undefined,
+    founderPrice: formData.get("founderPrice") || undefined,
+    includedCredits: formData.get("includedCredits") || undefined,
+    rolloverLimit: formData.get("rolloverLimit"),
+    studioHoursIncluded: formData.get("studioHoursIncluded"),
+    micrositeTier: formData.get("micrositeTier"),
+    sort: formData.get("sort"),
+  });
+  if (!parsed.success) return { error: "Datos inválidos" };
+
+  const { planId, code, monthlyPrice, founderPrice, includedCredits, ...data } = parsed.data;
+  const features = parseList(formData.get("features"));
+  const flags = {
+    highlighted: formData.get("highlighted") === "on",
+    primeAccess: formData.get("primeAccess") === "on",
+    premiumRoomAccess: formData.get("premiumRoomAccess") === "on",
+    includesLocker: formData.get("includesLocker") === "on",
+    active: formData.get("active") === "on",
+  };
+  const common = { ...data, tagline: data.tagline ?? null, features, ...flags };
+
+  let id = planId;
+  if (planId) {
+    await db.membershipPlan.update({ where: { id: planId }, data: common });
+  } else {
+    if (!code) return { error: "El código es obligatorio (ej. \"starter\")" };
+    if (monthlyPrice == null || includedCredits == null)
+      return { error: "Precio mensual y horas incluidas son obligatorios al crear" };
+    if (await db.membershipPlan.findUnique({ where: { code } }))
+      return { error: `Ya existe un plan con el código "${code}"` };
+    const created = await db.membershipPlan.create({
+      data: {
+        ...common,
+        code,
+        monthlyPriceCents: Math.round(monthlyPrice * 100),
+        founderPriceCents: founderPrice != null ? Math.round(founderPrice * 100) : null,
+        includedCredits,
+      },
+    });
+    id = created.id;
+  }
+  await audit({
+    actorId: session.user.id,
+    action: planId ? "plan.updated" : "plan.created",
+    entity: "MembershipPlan",
+    entityId: id,
+    data: { name: data.name },
+  });
+  revalidatePath("/admin/catalog");
+  revalidatePath("/memberships");
+  revalidatePath("/la-ceiba");
+  revalidatePath("/for-practitioners");
+  revalidatePath("/the-practice");
+  return { ok: true };
+}
+
+/**
+ * Baja de plan: hard delete solo si nadie lo ha contratado nunca; si tiene
+ * membresías (activas o históricas) se desactiva para preservar el historial
+ * de cobros y créditos.
+ */
+export async function deletePlan(planId: string) {
+  const session = await requireAdmin();
+  const plan = await db.membershipPlan.findUnique({
+    where: { id: planId },
+    include: { _count: { select: { memberships: true } } },
+  });
+  if (!plan) return { error: "Plan no encontrado" };
+
+  if (plan._count.memberships > 0) {
+    await db.membershipPlan.update({ where: { id: planId }, data: { active: false } });
+    await audit({
+      actorId: session.user.id,
+      action: "plan.deactivated",
+      entity: "MembershipPlan",
+      entityId: planId,
+      data: { reason: `${plan._count.memberships} membresías existentes` },
+    });
+  } else {
+    await db.membershipPlan.delete({ where: { id: planId } });
+    await audit({
+      actorId: session.user.id,
+      action: "plan.deleted",
+      entity: "MembershipPlan",
+      entityId: planId,
+      data: { name: plan.name },
+    });
+  }
+  revalidatePath("/admin/catalog");
+  revalidatePath("/memberships");
+  revalidatePath("/la-ceiba");
+  revalidatePath("/for-practitioners");
+  revalidatePath("/the-practice");
+  return { ok: true };
+}
+
+// ------------------------------------------------------------
 // Red física: establecimientos, tipos de sala y salas
 // ------------------------------------------------------------
 
@@ -525,6 +654,8 @@ const roomSchema = z.object({
   name: z.string().min(2).max(60),
   description: z.string().max(500).optional(),
   priceOverride: z.coerce.number().min(0).max(100000).optional(),
+  widthMeters: z.coerce.number().min(0.5).max(50).optional(),
+  lengthMeters: z.coerce.number().min(0.5).max(50).optional(),
 });
 
 /**
@@ -541,12 +672,15 @@ export async function upsertRoom(formData: FormData) {
     name: formData.get("name"),
     description: formData.get("description") || undefined,
     priceOverride: formData.get("priceOverride") || undefined,
+    widthMeters: formData.get("widthMeters") || undefined,
+    lengthMeters: formData.get("lengthMeters") || undefined,
   });
   if (!parsed.success) return { error: "Datos inválidos" };
 
-  const { roomId, priceOverride, ...data } = parsed.data;
+  const { roomId, priceOverride, widthMeters, lengthMeters, ...data } = parsed.data;
   const amenities = parseList(formData.get("amenities"));
   const hourlyPriceCentsOverride = priceOverride != null ? Math.round(priceOverride * 100) : null;
+  const size = { widthMeters: widthMeters ?? null, lengthMeters: lengthMeters ?? null };
 
   const [location, roomType] = await Promise.all([
     db.location.findUnique({ where: { id: data.locationId } }),
@@ -566,6 +700,7 @@ export async function upsertRoom(formData: FormData) {
         description: data.description ?? null,
         amenities,
         hourlyPriceCentsOverride,
+        ...size,
       },
     });
   } else {
@@ -575,7 +710,14 @@ export async function upsertRoom(formData: FormData) {
     });
     if (dup) return { error: `Ya existe una sala "${slug}" en ${location.shortName}` };
     const created = await db.room.create({
-      data: { ...data, description: data.description ?? null, slug, amenities, hourlyPriceCentsOverride },
+      data: {
+        ...data,
+        ...size,
+        description: data.description ?? null,
+        slug,
+        amenities,
+        hourlyPriceCentsOverride,
+      },
     });
     id = created.id;
   }
