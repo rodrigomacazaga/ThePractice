@@ -39,7 +39,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: TITLE,
     description: DESCRIPTION,
-    images: ["/images/hero-space.jpg"],
+    images: ["/images/room-talk.jpg"],
     type: "website",
     locale: "es_MX",
   },
@@ -47,7 +47,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: TITLE,
     description: DESCRIPTION,
-    images: ["/images/hero-space.jpg"],
+    images: ["/images/room-talk.jpg"],
   },
 };
 
@@ -232,13 +232,12 @@ export default async function LaCeibaLandingPage() {
               </Badge>
             </div>
             <h1 className="mt-6 font-display text-4xl font-bold tracking-tight text-balance sm:text-5xl lg:text-6xl">
-              Abre tu práctica privada sin asumir una renta fija.
+              Estrena consultorio sin pagar renta fija.
             </h1>
             <p className="mt-6 max-w-xl text-lg leading-relaxed text-paper/65">
-              Un espacio profesional, flexible y listo para operar: salas
-              privadas equipadas, recepción, reservaciones digitales,
-              micrositio y comunidad. La infraestructura física y digital de tu
-              práctica, resuelta.
+              Consultorios privados, equipados y listos para atender en Plaza
+              La Ceiba. Pagas por hora o con membresía — con recepción,
+              reservaciones digitales, micrositio y comunidad incluidos.
             </p>
             <div className="mt-9 flex flex-wrap gap-3">
               <TrackClick event="cta_click" params={{ placement: "hero", cta: "aplicar-founder" }}>
@@ -268,8 +267,8 @@ export default async function LaCeibaLandingPage() {
           <div>
             <div className="relative aspect-[3/2] overflow-hidden rounded-2xl shadow-(--shadow-lift)">
               <Image
-                src="/images/hero-space.jpg"
-                alt="Corredor de salas privadas en The Practice La Ceiba"
+                src="/images/room-talk.jpg"
+                alt="Talk Room: consultorio privado para terapia en The Practice La Ceiba"
                 fill
                 priority
                 sizes="(max-width: 1024px) 100vw, 45vw"
@@ -277,7 +276,7 @@ export default async function LaCeibaLandingPage() {
               />
             </div>
             <p className="mt-4 text-center font-display text-[10px] font-semibold tracking-[0.25em] text-paper/40 uppercase">
-              The Practice La Ceiba · Salas privadas
+              The Practice La Ceiba · Talk Room
             </p>
           </div>
         </div>
@@ -325,7 +324,7 @@ export default async function LaCeibaLandingPage() {
           <SectionHeading
             eyebrow="Los espacios"
             title="Un espacio para cada tipo de sesión."
-            description="Salas para terapia individual, parejas, consulta profesional, nutrición, masaje o wellness, y talleres o sesiones grupales."
+            description="Salas para terapia individual, parejas, familias, consulta profesional, nutrición, masaje o wellness, y talleres o sesiones grupales."
           />
           <div className="mt-12 grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
             {roomTypes.map((rt) => (

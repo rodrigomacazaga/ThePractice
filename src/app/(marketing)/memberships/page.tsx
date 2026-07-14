@@ -261,7 +261,7 @@ export default async function MembershipsPage() {
             <SectionHeading
               eyebrow="Cómo funcionan los créditos"
               title="Una bolsa de horas que rinde en cualquier espacio."
-              description="Aquí entran los créditos, la mecánica interna de las membresías: tu plan te da una bolsa mensual que usas donde quieras. Una hora estándar cuesta 1 crédito; premium 1.5; studio o movement 2. Usas cualquier sala sin cambiar de plan."
+              description="Aquí entran los créditos, la mecánica interna de las membresías: tu plan te da una bolsa mensual que usas donde quieras. Una hora estándar cuesta 1 crédito; premium o family, 1.5; studio, 2. Usas cualquier sala sin cambiar de plan."
               align="center"
             />
             <div className="mx-auto mt-10 max-w-4xl">
