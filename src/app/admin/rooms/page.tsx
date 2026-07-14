@@ -1,5 +1,5 @@
 import { Plus } from "lucide-react";
-import type { Location, Room, RoomType } from "@prisma/client";
+import type { Room, RoomType } from "@prisma/client";
 import { requireAdmin } from "@/lib/auth-helpers";
 import { db } from "@/lib/db";
 import { formatCredits, formatMXN } from "@/lib/utils";
@@ -13,38 +13,25 @@ import { toggleRoomActive, upsertRoom } from "../actions";
 
 export const dynamic = "force-dynamic";
 
-/** Campos compartidos entre alta y edición. Sin `room` es formulario de alta. */
+/**
+ * Campos compartidos entre alta y edición. Los tipos ofrecidos son los del
+ * establecimiento: cada sala pertenece a un tipo de su propia ubicación.
+ */
 function RoomFields({
   room,
-  locations,
+  locationId,
   roomTypes,
 }: {
   room?: Room;
-  locations: Location[];
+  locationId: string;
   roomTypes: RoomType[];
 }) {
-  const uid = room?.id ?? "new";
+  const uid = room?.id ?? `new-${locationId}`;
   return (
     <>
       {room && <input type="hidden" name="roomId" value={room.id} />}
+      <input type="hidden" name="locationId" value={locationId} />
       <div className="grid gap-3 sm:grid-cols-2">
-        {room ? (
-          // La ubicación es fija al editar: una sala física no cambia de edificio.
-          <input type="hidden" name="locationId" value={room.locationId} />
-        ) : (
-          <Field label="Establecimiento" htmlFor={`locationId-${uid}`}>
-            <Select id={`locationId-${uid}`} name="locationId" required defaultValue="">
-              <option value="" disabled>
-                Selecciona…
-              </option>
-              {locations.map((loc) => (
-                <option key={loc.id} value={loc.id}>
-                  {loc.shortName}
-                </option>
-              ))}
-            </Select>
-          </Field>
-        )}
         <Field label="Tipo de sala" htmlFor={`roomTypeId-${uid}`}>
           <Select
             id={`roomTypeId-${uid}`}
@@ -71,6 +58,8 @@ function RoomFields({
             defaultValue={room?.name}
           />
         </Field>
+      </div>
+      <div className="mt-3">
         <Field label="Precio/hora override (MXN, vacío = precio del tipo)" htmlFor={`po-${uid}`}>
           <Input
             id={`po-${uid}`}
@@ -110,113 +99,141 @@ function RoomFields({
 export default async function AdminRoomsPage() {
   await requireAdmin();
 
-  const [rooms, locations, roomTypes] = await Promise.all([
-    db.room.findMany({
-      include: { location: true, roomType: true, _count: { select: { bookings: true } } },
-      orderBy: [{ location: { sort: "asc" } }, { roomType: { sort: "asc" } }, { name: "asc" }],
-    }),
-    db.location.findMany({ orderBy: { sort: "asc" } }),
-    db.roomType.findMany({ orderBy: { sort: "asc" } }),
-  ]);
+  const locations = await db.location.findMany({
+    orderBy: { sort: "asc" },
+    include: {
+      roomTypes: { orderBy: { sort: "asc" } },
+      rooms: {
+        include: { roomType: true, _count: { select: { bookings: true } } },
+        orderBy: [{ roomType: { sort: "asc" } }, { name: "asc" }],
+      },
+    },
+  });
 
   return (
     <>
       <PageHeader
         title="Salas"
-        description="Inventario de salas por ubicación. Los precios base se configuran por tipo de sala en Planes y precios."
+        description="Inventario por establecimiento. Cada sala pertenece a un tipo de sala de su ubicación; los precios base se configuran por tipo en Planes y precios."
       />
 
-      <Table>
-        <THead>
-          <TR>
-            <TH>Sala</TH>
-            <TH>Ubicación</TH>
-            <TH>Tipo</TH>
-            <TH className="text-right">Precio/hora</TH>
-            <TH className="text-right">Créditos/h</TH>
-            <TH className="text-right">Reservas</TH>
-            <TH>Estado</TH>
-            <TH></TH>
-          </TR>
-        </THead>
-        <TBody>
-          {rooms.map((room) => {
-            const toggle = toggleRoomActive.bind(null, room.id);
-            return (
-              <TR key={room.id}>
-                <TD className="font-display font-bold">{room.name}</TD>
-                <TD>{room.location.shortName}</TD>
-                <TD>{room.roomType.name}</TD>
-                <TD className="text-right">
-                  {formatMXN(room.hourlyPriceCentsOverride ?? room.roomType.baseHourlyPriceCents)}
-                  {room.hourlyPriceCentsOverride != null && (
-                    <span className="block text-[10px] text-stone">override</span>
-                  )}
-                </TD>
-                <TD className="text-right">{formatCredits(room.roomType.creditsPerHour)}</TD>
-                <TD className="text-right">{room._count.bookings}</TD>
-                <TD>
-                  <Badge variant={room.active ? "sage" : "default"}>
-                    {room.active ? "Activa" : "Inactiva"}
-                  </Badge>
-                </TD>
-                <TD>
-                  <ActionButton
-                    action={toggle}
-                    label={room.active ? "Desactivar" : "Activar"}
-                    variant="ghost"
-                  />
-                </TD>
-              </TR>
-            );
-          })}
-        </TBody>
-      </Table>
+      {locations.map((loc) => (
+        <section key={loc.id} className="mb-12">
+          <h2 className="eyebrow">
+            {loc.shortName} · {loc.rooms.length}{" "}
+            {loc.rooms.length === 1 ? "sala" : "salas"}
+          </h2>
 
-      <div className="mt-8 grid gap-5 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Plus className="h-4.5 w-4.5 text-clay" /> Nueva sala
-            </CardTitle>
-            <CardDescription>
-              Se asigna a un establecimiento y hereda precio y créditos de su tipo, salvo
-              override. El identificador se genera del nombre (ej. “Online 02” →{" "}
-              <span className="font-mono">online-02</span>).
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ActionForm action={upsertRoom} submitLabel="Crear sala">
-              <RoomFields locations={locations} roomTypes={roomTypes} />
-            </ActionForm>
-          </CardContent>
-        </Card>
+          {loc.rooms.length > 0 && (
+            <div className="mt-4">
+              <Table>
+                <THead>
+                  <TR>
+                    <TH>Sala</TH>
+                    <TH>Tipo</TH>
+                    <TH className="text-right">Precio/hora</TH>
+                    <TH className="text-right">Créditos/h</TH>
+                    <TH className="text-right">Reservas</TH>
+                    <TH>Estado</TH>
+                    <TH></TH>
+                  </TR>
+                </THead>
+                <TBody>
+                  {loc.rooms.map((room) => {
+                    const toggle = toggleRoomActive.bind(null, room.id);
+                    return (
+                      <TR key={room.id}>
+                        <TD className="font-display font-bold">{room.name}</TD>
+                        <TD>{room.roomType.name}</TD>
+                        <TD className="text-right">
+                          {formatMXN(
+                            room.hourlyPriceCentsOverride ?? room.roomType.baseHourlyPriceCents
+                          )}
+                          {room.hourlyPriceCentsOverride != null && (
+                            <span className="block text-[10px] text-stone">override</span>
+                          )}
+                        </TD>
+                        <TD className="text-right">
+                          {formatCredits(room.roomType.creditsPerHour)}
+                        </TD>
+                        <TD className="text-right">{room._count.bookings}</TD>
+                        <TD>
+                          <Badge variant={room.active ? "sage" : "default"}>
+                            {room.active ? "Activa" : "Inactiva"}
+                          </Badge>
+                        </TD>
+                        <TD>
+                          <ActionButton
+                            action={toggle}
+                            label={room.active ? "Desactivar" : "Activar"}
+                            variant="ghost"
+                          />
+                        </TD>
+                      </TR>
+                    );
+                  })}
+                </TBody>
+              </Table>
+            </div>
+          )}
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Editar salas</CardTitle>
-            <CardDescription>
-              Atributos por sala: tipo, descripción, amenidades y override de precio. Para
-              mover una sala de ubicación, desactívala y créala en la nueva.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            {rooms.map((room) => (
-              <details key={room.id} className="rounded-xl bg-paper px-4 py-3">
-                <summary className="cursor-pointer text-sm font-semibold">
-                  {room.name}{" "}
-                  <span className="font-normal text-stone">
-                    · {room.location.shortName} · {room.roomType.name}
-                  </span>
-                </summary>
-                <ActionForm action={upsertRoom} submitLabel="Guardar cambios" className="mt-4">
-                  <RoomFields room={room} locations={locations} roomTypes={roomTypes} />
-                </ActionForm>
-              </details>
-            ))}
-          </CardContent>
-        </Card>
-      </div>
+          <div className="mt-5 grid gap-5 lg:grid-cols-2">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Plus className="h-4.5 w-4.5 text-clay" /> Nueva sala en {loc.shortName}
+                </CardTitle>
+                <CardDescription>
+                  Hereda precio y créditos de su tipo, salvo override. El identificador se
+                  genera del nombre (ej. “Online 02” →{" "}
+                  <span className="font-mono">online-02</span>).
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {loc.roomTypes.length > 0 ? (
+                  <ActionForm action={upsertRoom} submitLabel="Crear sala">
+                    <RoomFields locationId={loc.id} roomTypes={loc.roomTypes} />
+                  </ActionForm>
+                ) : (
+                  <p className="text-sm text-stone">
+                    Este establecimiento aún no tiene tipos de sala. Créalos primero en{" "}
+                    <span className="font-semibold">Planes y precios</span>.
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+
+            {loc.rooms.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Editar salas</CardTitle>
+                  <CardDescription>
+                    Atributos por sala: tipo, descripción, amenidades y override de precio.
+                    Para mover una sala de ubicación, desactívala y créala en la nueva.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  {loc.rooms.map((room) => (
+                    <details key={room.id} className="rounded-xl bg-paper px-4 py-3">
+                      <summary className="cursor-pointer text-sm font-semibold">
+                        {room.name}{" "}
+                        <span className="font-normal text-stone">· {room.roomType.name}</span>
+                      </summary>
+                      <ActionForm
+                        action={upsertRoom}
+                        submitLabel="Guardar cambios"
+                        className="mt-4"
+                      >
+                        <RoomFields room={room} locationId={loc.id} roomTypes={loc.roomTypes} />
+                      </ActionForm>
+                    </details>
+                  ))}
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        </section>
+      ))}
     </>
   );
 }

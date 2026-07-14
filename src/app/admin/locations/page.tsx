@@ -163,7 +163,7 @@ export default async function AdminLocationsPage() {
                   </Badge>
                 </div>
 
-                <div className="mt-6 grid grid-cols-4 gap-3 text-center">
+                <div className="mt-6 grid grid-cols-2 gap-3 text-center xl:grid-cols-4">
                   {[
                     { label: "Salas", value: loc._count.rooms },
                     { label: "Practitioners", value: loc._count.practitioners },
@@ -173,9 +173,9 @@ export default async function AdminLocationsPage() {
                       value: `${lockersFree}/${loc.lockers.length}`,
                     },
                   ].map((s) => (
-                    <div key={s.label} className="rounded-xl bg-paper p-3">
+                    <div key={s.label} className="min-w-0 rounded-xl bg-paper px-2 py-3">
                       <p className="font-display text-lg font-bold">{s.value}</p>
-                      <p className="text-[10px] font-semibold tracking-wider text-stone uppercase">
+                      <p className="text-[10px] leading-tight font-semibold tracking-wide break-words text-stone uppercase">
                         {s.label}
                       </p>
                     </div>

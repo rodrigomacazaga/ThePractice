@@ -102,9 +102,10 @@ async function main() {
   // Tipos de sala
   // ------------------------------------------------------------
   const talkType = await db.roomType.upsert({
-    where: { code: "talk" },
+    where: { locationId_code: { locationId: laCeiba.id, code: "talk" } },
     update: {},
     create: {
+      locationId: laCeiba.id,
       code: "talk",
       name: "Talk Room",
       description:
@@ -120,9 +121,10 @@ async function main() {
   });
 
   const consultType = await db.roomType.upsert({
-    where: { code: "consult" },
+    where: { locationId_code: { locationId: laCeiba.id, code: "consult" } },
     update: {},
     create: {
+      locationId: laCeiba.id,
       code: "consult",
       name: "Consult Room",
       description:
@@ -138,9 +140,10 @@ async function main() {
   });
 
   const premiumType = await db.roomType.upsert({
-    where: { code: "premium" },
+    where: { locationId_code: { locationId: laCeiba.id, code: "premium" } },
     update: {},
     create: {
+      locationId: laCeiba.id,
       code: "premium",
       name: "Premium Room",
       description:
@@ -156,9 +159,10 @@ async function main() {
   });
 
   const studioType = await db.roomType.upsert({
-    where: { code: "studio" },
+    where: { locationId_code: { locationId: laCeiba.id, code: "studio" } },
     update: {},
     create: {
+      locationId: laCeiba.id,
       code: "studio",
       name: "Studio",
       description:
@@ -174,9 +178,10 @@ async function main() {
   });
 
   const restoreType = await db.roomType.upsert({
-    where: { code: "restore" },
+    where: { locationId_code: { locationId: laCeiba.id, code: "restore" } },
     update: {},
     create: {
+      locationId: laCeiba.id,
       code: "restore",
       name: "Restore Room",
       description:
@@ -192,9 +197,10 @@ async function main() {
   });
 
   const onlineType = await db.roomType.upsert({
-    where: { code: "online" },
+    where: { locationId_code: { locationId: laCeiba.id, code: "online" } },
     update: {},
     create: {
+      locationId: laCeiba.id,
       code: "online",
       name: "Online Studio",
       description:
@@ -214,11 +220,11 @@ async function main() {
   // se desactiva (no se borra, por si tiene reservas históricas). "family"
   // fue un reemplazo provisional que nunca llegó a main; se desactiva igual.
   await db.roomType.updateMany({
-    where: { code: { in: ["movement", "family"] } },
+    where: { locationId: laCeiba.id, code: { in: ["movement", "family"] } },
     data: { active: false },
   });
   await db.room.updateMany({
-    where: { slug: { in: ["movement-01", "family-01"] } },
+    where: { locationId: laCeiba.id, slug: { in: ["movement-01", "family-01"] } },
     data: { active: false },
   });
 

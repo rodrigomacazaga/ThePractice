@@ -11,8 +11,8 @@ import { ActionForm } from "@/components/dashboard/action-form";
 import { updatePlanPricing, updateRoomTypePricing, upsertRoomType } from "../actions";
 
 /** Atributos de un tipo de sala (los precios van en su formulario dedicado). */
-function RoomTypeAttributeFields({ rt }: { rt?: RoomType }) {
-  const uid = rt?.id ?? "new";
+function RoomTypeAttributeFields({ rt, uid: uidProp }: { rt?: RoomType; uid?: string }) {
+  const uid = uidProp ?? rt?.id ?? "new";
   return (
     <>
       {rt && <input type="hidden" name="roomTypeId" value={rt.id} />}
@@ -95,9 +95,12 @@ export const dynamic = "force-dynamic";
 export default async function AdminCatalogPage() {
   await requireAdmin();
 
-  const [plans, roomTypes, packages, addOns] = await Promise.all([
+  const [plans, locations, packages, addOns] = await Promise.all([
     db.membershipPlan.findMany({ orderBy: { sort: "asc" } }),
-    db.roomType.findMany({ orderBy: { sort: "asc" } }),
+    db.location.findMany({
+      orderBy: { sort: "asc" },
+      include: { roomTypes: { orderBy: { sort: "asc" } } },
+    }),
     db.hourPackage.findMany({ orderBy: { sort: "asc" } }),
     db.addOn.findMany({ orderBy: { sort: "asc" } }),
   ]);
@@ -169,10 +172,12 @@ export default async function AdminCatalogPage() {
         ))}
       </div>
 
-      {/* TIPOS DE SALA */}
-      <h2 className="mt-12 eyebrow">Tipos de sala</h2>
-      <div className="mt-4 grid gap-5 md:grid-cols-2">
-        {roomTypes.map((rt) => (
+      {/* TIPOS DE SALA — viven dentro de cada establecimiento */}
+      {locations.map((loc) => (
+        <section key={loc.id}>
+          <h2 className="mt-12 eyebrow">Tipos de sala · {loc.shortName}</h2>
+          <div className="mt-4 grid gap-5 md:grid-cols-2">
+            {loc.roomTypes.map((rt) => (
           <Card key={rt.id}>
             <CardHeader className="flex-row items-center justify-between">
               <CardTitle>
@@ -235,52 +240,61 @@ export default async function AdminCatalogPage() {
               </details>
             </CardContent>
           </Card>
-        ))}
-      </div>
+            ))}
 
-      {/* NUEVO TIPO DE SALA */}
-      <Card className="mt-6">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Plus className="h-4.5 w-4.5 text-clay" /> Nuevo tipo de sala
-          </CardTitle>
-          <CardDescription>
-            El código es la llave interna del tipo (minúsculas y guiones, ej.{" "}
-            <span className="font-mono">focus</span>) y no se puede cambiar después. Las salas
-            de este tipo se dan de alta en la sección Salas.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ActionForm action={upsertRoomType} submitLabel="Crear tipo de sala">
-            <div className="grid gap-3 sm:grid-cols-3">
-              <Field label="Código" htmlFor="rt-code-new">
-                <Input id="rt-code-new" name="code" required placeholder="focus" />
-              </Field>
-              <Field label="Precio/hora (MXN)" htmlFor="rt-bp-new">
-                <Input id="rt-bp-new" name="basePrice" type="number" min={0} required />
-              </Field>
-              <Field label="Con membresía (MXN)" htmlFor="rt-mp-new">
-                <Input id="rt-mp-new" name="memberPrice" type="number" min={0} />
-              </Field>
-            </div>
-            <div className="mt-3 grid gap-3 sm:grid-cols-3">
-              <Field label="Créditos/hora" htmlFor="rt-cph-new">
-                <Input
-                  id="rt-cph-new"
-                  name="creditsPerHour"
-                  type="number"
-                  min={0.5}
-                  step="0.5"
-                  defaultValue={1}
-                />
-              </Field>
-            </div>
-            <div className="mt-3">
-              <RoomTypeAttributeFields />
-            </div>
-          </ActionForm>
-        </CardContent>
-      </Card>
+            {/* Nuevo tipo en esta ubicación */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Plus className="h-4.5 w-4.5 text-clay" /> Nuevo tipo en {loc.shortName}
+                </CardTitle>
+                <CardDescription>
+                  El código es la llave interna del tipo (minúsculas y guiones, ej.{" "}
+                  <span className="font-mono">focus</span>), único por ubicación y fijo tras
+                  crear. Las salas de este tipo se dan de alta en la sección Salas.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ActionForm action={upsertRoomType} submitLabel="Crear tipo de sala">
+                  <input type="hidden" name="locationId" value={loc.id} />
+                  <div className="grid gap-3 sm:grid-cols-3">
+                    <Field label="Código" htmlFor={`rt-code-new-${loc.id}`}>
+                      <Input id={`rt-code-new-${loc.id}`} name="code" required placeholder="focus" />
+                    </Field>
+                    <Field label="Precio/hora (MXN)" htmlFor={`rt-bp-new-${loc.id}`}>
+                      <Input
+                        id={`rt-bp-new-${loc.id}`}
+                        name="basePrice"
+                        type="number"
+                        min={0}
+                        required
+                      />
+                    </Field>
+                    <Field label="Con membresía (MXN)" htmlFor={`rt-mp-new-${loc.id}`}>
+                      <Input id={`rt-mp-new-${loc.id}`} name="memberPrice" type="number" min={0} />
+                    </Field>
+                  </div>
+                  <div className="mt-3 grid gap-3 sm:grid-cols-3">
+                    <Field label="Créditos/hora" htmlFor={`rt-cph-new-${loc.id}`}>
+                      <Input
+                        id={`rt-cph-new-${loc.id}`}
+                        name="creditsPerHour"
+                        type="number"
+                        min={0.5}
+                        step="0.5"
+                        defaultValue={1}
+                      />
+                    </Field>
+                  </div>
+                  <div className="mt-3">
+                    <RoomTypeAttributeFields uid={`new-${loc.id}`} />
+                  </div>
+                </ActionForm>
+              </CardContent>
+            </Card>
+          </div>
+        </section>
+      ))}
 
       {/* PAQUETES Y ADD-ONS (lectura) */}
       <div className="mt-12 grid gap-8 md:grid-cols-2">

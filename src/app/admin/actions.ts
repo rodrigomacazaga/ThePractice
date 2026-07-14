@@ -435,6 +435,7 @@ export async function upsertLocation(formData: FormData) {
 
 const roomTypeSchema = z.object({
   roomTypeId: z.string().optional(),
+  locationId: z.string().optional(),
   code: z
     .string()
     .regex(/^[a-z0-9-]{2,24}$/, "minúsculas, números y guiones")
@@ -449,14 +450,16 @@ const roomTypeSchema = z.object({
 });
 
 /**
- * Alta y edición de tipos de sala. El código es inmutable tras crear (los
- * planos SVG y el seed lo usan como llave semántica). Los precios de tipos
- * existentes se editan en su formulario dedicado de "Planes y precios".
+ * Alta y edición de tipos de sala. Los tipos viven dentro de cada
+ * establecimiento: el código es único por ubicación e inmutable tras crear
+ * (los planos SVG lo usan como llave semántica), igual que la ubicación.
+ * Los precios de tipos existentes se editan en su formulario dedicado.
  */
 export async function upsertRoomType(formData: FormData) {
   const session = await requireAdmin();
   const parsed = roomTypeSchema.safeParse({
     roomTypeId: formData.get("roomTypeId") || undefined,
+    locationId: formData.get("locationId") || undefined,
     code: formData.get("code") || undefined,
     name: formData.get("name"),
     description: formData.get("description") || undefined,
@@ -468,7 +471,8 @@ export async function upsertRoomType(formData: FormData) {
   });
   if (!parsed.success) return { error: "Datos inválidos" };
 
-  const { roomTypeId, code, basePrice, memberPrice, creditsPerHour, ...data } = parsed.data;
+  const { roomTypeId, locationId, code, basePrice, memberPrice, creditsPerHour, ...data } =
+    parsed.data;
   const idealFor = parseList(formData.get("idealFor"));
   const features = parseList(formData.get("features"));
   const active = formData.get("active") === "on";
@@ -478,14 +482,18 @@ export async function upsertRoomType(formData: FormData) {
   if (roomTypeId) {
     await db.roomType.update({ where: { id: roomTypeId }, data: common });
   } else {
+    if (!locationId) return { error: "Falta la ubicación" };
     if (!code) return { error: "El código es obligatorio (ej. \"focus\")" };
     if (basePrice == null || creditsPerHour == null)
       return { error: "Precio base y créditos/hora son obligatorios al crear" };
-    if (await db.roomType.findUnique({ where: { code } }))
-      return { error: `Ya existe un tipo con el código "${code}"` };
+    const location = await db.location.findUnique({ where: { id: locationId } });
+    if (!location) return { error: "Ubicación inválida" };
+    if (await db.roomType.findUnique({ where: { locationId_code: { locationId, code } } }))
+      return { error: `Ya existe un tipo "${code}" en ${location.shortName}` };
     const created = await db.roomType.create({
       data: {
         ...common,
+        locationId,
         code,
         baseHourlyPriceCents: Math.round(basePrice * 100),
         memberHourlyPriceCents: memberPrice != null ? Math.round(memberPrice * 100) : null,
@@ -545,6 +553,8 @@ export async function upsertRoom(formData: FormData) {
     db.roomType.findUnique({ where: { id: data.roomTypeId } }),
   ]);
   if (!location || !roomType) return { error: "Ubicación o tipo de sala inválidos" };
+  if (roomType.locationId !== location.id)
+    return { error: `El tipo "${roomType.name}" pertenece a otra ubicación` };
 
   let id = roomId;
   if (roomId) {

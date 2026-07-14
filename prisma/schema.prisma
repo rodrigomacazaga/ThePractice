@@ -175,6 +175,7 @@ model Location {
   updatedAt   DateTime       @updatedAt
 
   rooms         Room[]
+  roomTypes     RoomType[]
   practitioners PractitionerLocation[]
   bookings      Booking[]
   lockers       Locker[]
@@ -194,7 +195,11 @@ model PractitionerLocation {
 
 model RoomType {
   id                  String  @id @default(cuid())
-  code                String  @unique // "talk" | "consult" | "premium" | "studio"
+  // Los tipos de sala viven dentro de cada establecimiento: precios,
+  // créditos y catálogo se definen por ubicación.
+  locationId          String
+  location            Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  code                String // "talk" | "consult" | "premium" | "studio" — único por ubicación
   name                String // "Talk Room"
   description         String?
   creditsPerHour      Float   @default(1.0)
@@ -207,6 +212,9 @@ model RoomType {
   active              Boolean @default(true)
 
   rooms Room[]
+
+  @@unique([locationId, code])
+  @@index([locationId, active])
 }
 
 model Room {

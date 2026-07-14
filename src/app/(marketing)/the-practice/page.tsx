@@ -92,7 +92,11 @@ export default async function ThePracticePage() {
       []
     ),
     safeQuery(
-      () => db.roomType.findMany({ where: { active: true }, orderBy: { sort: "asc" } }),
+      () =>
+        db.roomType.findMany({
+          where: { active: true, location: { status: "OPEN" } },
+          orderBy: { sort: "asc" },
+        }),
       []
     ),
     safeQuery(

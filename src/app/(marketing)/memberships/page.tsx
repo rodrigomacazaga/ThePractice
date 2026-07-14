@@ -66,7 +66,11 @@ export default async function MembershipsPage() {
     ),
     safeQuery(() => db.addOn.findMany({ where: { active: true }, orderBy: { sort: "asc" } }), []),
     safeQuery(
-      () => db.roomType.findMany({ where: { active: true }, orderBy: { sort: "asc" } }),
+      () =>
+        db.roomType.findMany({
+          where: { active: true, location: { status: "OPEN" } },
+          orderBy: { sort: "asc" },
+        }),
       []
     ),
   ]);
