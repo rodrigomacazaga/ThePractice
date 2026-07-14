@@ -1,11 +1,127 @@
-import { Building2 } from "lucide-react";
+import { Building2, Plus } from "lucide-react";
+import type { Location } from "@prisma/client";
 import { requireAdmin } from "@/lib/auth-helpers";
 import { db } from "@/lib/db";
 import { PageHeader } from "@/components/dashboard/shell";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Field, Input, Textarea, Select } from "@/components/ui/form";
+import { ActionForm } from "@/components/dashboard/action-form";
+import { upsertLocation } from "../actions";
 
 export const dynamic = "force-dynamic";
+
+const STATUS_LABEL: Record<Location["status"], string> = {
+  OPEN: "Abierta",
+  COMING_SOON: "Próximamente",
+  CLOSED: "Cerrada",
+};
+
+/** Campos compartidos entre alta y edición. Sin `loc` es formulario de alta. */
+function LocationFields({ loc }: { loc?: Location }) {
+  const uid = loc?.id ?? "new";
+  return (
+    <>
+      {loc && <input type="hidden" name="locationId" value={loc.id} />}
+      <div className="grid gap-3 sm:grid-cols-2">
+        <Field label="Nombre completo" htmlFor={`name-${uid}`}>
+          <Input
+            id={`name-${uid}`}
+            name="name"
+            required
+            placeholder="The Practice Juriquilla"
+            defaultValue={loc?.name}
+          />
+        </Field>
+        <Field label="Nombre corto" htmlFor={`shortName-${uid}`}>
+          <Input
+            id={`shortName-${uid}`}
+            name="shortName"
+            required
+            placeholder="Juriquilla"
+            defaultValue={loc?.shortName}
+          />
+        </Field>
+        <Field label="Ciudad" htmlFor={`city-${uid}`}>
+          <Input id={`city-${uid}`} name="city" required defaultValue={loc?.city} />
+        </Field>
+        <Field label="Estado" htmlFor={`state-${uid}`}>
+          <Input id={`state-${uid}`} name="state" required defaultValue={loc?.state} />
+        </Field>
+      </div>
+      <div className="mt-3">
+        <Field label="Dirección" htmlFor={`address-${uid}`}>
+          <Input
+            id={`address-${uid}`}
+            name="address"
+            placeholder="Av. ... , local ..."
+            defaultValue={loc?.address ?? ""}
+          />
+        </Field>
+      </div>
+      <div className="mt-3">
+        <Field label="Descripción" htmlFor={`description-${uid}`}>
+          <Textarea
+            id={`description-${uid}`}
+            name="description"
+            rows={2}
+            defaultValue={loc?.description ?? ""}
+          />
+        </Field>
+      </div>
+      <div className="mt-3">
+        <Field label="Amenidades (separadas por coma)" htmlFor={`amenities-${uid}`}>
+          <Input
+            id={`amenities-${uid}`}
+            name="amenities"
+            placeholder="Recepción compartida, WiFi, Coffee station"
+            defaultValue={loc?.amenities.join(", ")}
+          />
+        </Field>
+      </div>
+      <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <Field label="Estatus" htmlFor={`status-${uid}`}>
+          <Select id={`status-${uid}`} name="status" defaultValue={loc?.status ?? "COMING_SOON"}>
+            {(Object.keys(STATUS_LABEL) as Location["status"][]).map((s) => (
+              <option key={s} value={s}>
+                {STATUS_LABEL[s]}
+              </option>
+            ))}
+          </Select>
+        </Field>
+        <Field label="Abre (hora)" htmlFor={`openingHour-${uid}`}>
+          <Input
+            id={`openingHour-${uid}`}
+            name="openingHour"
+            type="number"
+            min={0}
+            max={23}
+            defaultValue={loc?.openingHour ?? 7}
+          />
+        </Field>
+        <Field label="Cierra (hora)" htmlFor={`closingHour-${uid}`}>
+          <Input
+            id={`closingHour-${uid}`}
+            name="closingHour"
+            type="number"
+            min={1}
+            max={24}
+            defaultValue={loc?.closingHour ?? 22}
+          />
+        </Field>
+        <Field label="Orden" htmlFor={`sort-${uid}`}>
+          <Input
+            id={`sort-${uid}`}
+            name="sort"
+            type="number"
+            min={0}
+            defaultValue={loc?.sort ?? 0}
+          />
+        </Field>
+      </div>
+    </>
+  );
+}
 
 export default async function AdminLocationsPage() {
   await requireAdmin();
@@ -43,7 +159,7 @@ export default async function AdminLocationsPage() {
                     </p>
                   </div>
                   <Badge variant={loc.status === "OPEN" ? "sage" : "amber"}>
-                    {loc.status === "OPEN" ? "Abierta" : "Próximamente"}
+                    {STATUS_LABEL[loc.status]}
                   </Badge>
                 </div>
 
@@ -67,19 +183,41 @@ export default async function AdminLocationsPage() {
                 </div>
 
                 <p className="mt-4 text-xs text-stone">
-                  slug: <span className="font-mono">/locations/{loc.slug}</span>
+                  slug: <span className="font-mono">/locations/{loc.slug}</span> (fijo — es URL
+                  pública)
                 </p>
+
+                <details className="mt-4 border-t border-line pt-4">
+                  <summary className="cursor-pointer text-sm font-semibold text-clay">
+                    Editar ubicación
+                  </summary>
+                  <ActionForm action={upsertLocation} submitLabel="Guardar cambios" className="mt-4">
+                    <LocationFields loc={loc} />
+                  </ActionForm>
+                </details>
               </CardContent>
             </Card>
           );
         })}
       </div>
 
-      <p className="mt-6 text-xs leading-relaxed text-stone">
-        Alta de nuevas ubicaciones: vía seed o directamente en la base de datos
-        en el MVP. El formulario de alta con fotos y amenidades llega en la
-        siguiente fase (requiere el proveedor de storage en producción).
-      </p>
+      <Card className="mt-8">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Plus className="h-4.5 w-4.5 text-clay" /> Nueva ubicación
+          </CardTitle>
+          <CardDescription>
+            El slug público se genera del nombre corto (ej. “Centro Sur” →{" "}
+            <span className="font-mono">centro-sur</span>). Las fotos se cargan en una fase
+            posterior (requieren el proveedor de storage en producción).
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ActionForm action={upsertLocation} submitLabel="Crear ubicación">
+            <LocationFields />
+          </ActionForm>
+        </CardContent>
+      </Card>
     </>
   );
 }

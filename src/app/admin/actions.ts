@@ -5,6 +5,7 @@ import { z } from "zod";
 import { requireAdmin } from "@/lib/auth-helpers";
 import { db } from "@/lib/db";
 import { audit } from "@/lib/audit";
+import { slugify } from "@/lib/utils";
 import { sendEmailSafe, emailTemplates } from "@/lib/email";
 import { setSetting, type SettingKey } from "@/lib/settings";
 import { cancelRoomBooking, createAdminBlock, BookingError } from "@/lib/bookings/engine";
@@ -347,6 +348,237 @@ export async function updateBookingSettings(formData: FormData) {
     data: { keys },
   });
   revalidatePath("/admin/settings");
+  return { ok: true };
+}
+
+// ------------------------------------------------------------
+// Red física: establecimientos, tipos de sala y salas
+// ------------------------------------------------------------
+
+/** "a, b, c" → ["a","b","c"] — para amenities, features e idealFor. */
+function parseList(raw: FormDataEntryValue | null) {
+  return String(raw ?? "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
+const locationSchema = z.object({
+  locationId: z.string().optional(),
+  name: z.string().min(3).max(80),
+  shortName: z.string().min(2).max(40),
+  city: z.string().min(2).max(60),
+  state: z.string().min(2).max(60),
+  address: z.string().max(200).optional(),
+  description: z.string().max(1000).optional(),
+  status: z.enum(["OPEN", "COMING_SOON", "CLOSED"]),
+  openingHour: z.coerce.number().int().min(0).max(23),
+  closingHour: z.coerce.number().int().min(1).max(24),
+  sort: z.coerce.number().int().min(0).max(999),
+});
+
+/**
+ * Alta y edición de establecimientos. El slug se deriva del nombre corto al
+ * crear y es inmutable después: es URL pública y referencia de campañas.
+ */
+export async function upsertLocation(formData: FormData) {
+  const session = await requireAdmin();
+  const parsed = locationSchema.safeParse({
+    locationId: formData.get("locationId") || undefined,
+    name: formData.get("name"),
+    shortName: formData.get("shortName"),
+    city: formData.get("city"),
+    state: formData.get("state"),
+    address: formData.get("address") || undefined,
+    description: formData.get("description") || undefined,
+    status: formData.get("status"),
+    openingHour: formData.get("openingHour"),
+    closingHour: formData.get("closingHour"),
+    sort: formData.get("sort"),
+  });
+  if (!parsed.success) return { error: "Datos inválidos" };
+  if (parsed.data.closingHour <= parsed.data.openingHour)
+    return { error: "El cierre debe ser posterior a la apertura" };
+
+  const { locationId, ...data } = parsed.data;
+  const amenities = parseList(formData.get("amenities"));
+  const common = {
+    ...data,
+    address: data.address ?? null,
+    description: data.description ?? null,
+    amenities,
+  };
+
+  let id = locationId;
+  if (locationId) {
+    await db.location.update({ where: { id: locationId }, data: common });
+  } else {
+    const slug = slugify(data.shortName);
+    if (await db.location.findUnique({ where: { slug } }))
+      return { error: `Ya existe una ubicación con el slug "${slug}"` };
+    const created = await db.location.create({ data: { ...common, slug } });
+    id = created.id;
+  }
+  await audit({
+    actorId: session.user.id,
+    action: locationId ? "location.updated" : "location.created",
+    entity: "Location",
+    entityId: id,
+    data: { name: data.name, status: data.status },
+  });
+  revalidatePath("/admin/locations");
+  revalidatePath("/locations");
+  revalidatePath("/the-practice");
+  revalidatePath("/la-ceiba");
+  return { ok: true };
+}
+
+const roomTypeSchema = z.object({
+  roomTypeId: z.string().optional(),
+  code: z
+    .string()
+    .regex(/^[a-z0-9-]{2,24}$/, "minúsculas, números y guiones")
+    .optional(),
+  name: z.string().min(3).max(60),
+  description: z.string().max(500).optional(),
+  capacity: z.coerce.number().int().min(1).max(30),
+  sort: z.coerce.number().int().min(0).max(999),
+  basePrice: z.coerce.number().min(0).max(100000).optional(),
+  memberPrice: z.coerce.number().min(0).max(100000).optional(),
+  creditsPerHour: z.coerce.number().min(0.5).max(10).optional(),
+});
+
+/**
+ * Alta y edición de tipos de sala. El código es inmutable tras crear (los
+ * planos SVG y el seed lo usan como llave semántica). Los precios de tipos
+ * existentes se editan en su formulario dedicado de "Planes y precios".
+ */
+export async function upsertRoomType(formData: FormData) {
+  const session = await requireAdmin();
+  const parsed = roomTypeSchema.safeParse({
+    roomTypeId: formData.get("roomTypeId") || undefined,
+    code: formData.get("code") || undefined,
+    name: formData.get("name"),
+    description: formData.get("description") || undefined,
+    capacity: formData.get("capacity"),
+    sort: formData.get("sort"),
+    basePrice: formData.get("basePrice") || undefined,
+    memberPrice: formData.get("memberPrice") || undefined,
+    creditsPerHour: formData.get("creditsPerHour") || undefined,
+  });
+  if (!parsed.success) return { error: "Datos inválidos" };
+
+  const { roomTypeId, code, basePrice, memberPrice, creditsPerHour, ...data } = parsed.data;
+  const idealFor = parseList(formData.get("idealFor"));
+  const features = parseList(formData.get("features"));
+  const active = formData.get("active") === "on";
+  const common = { ...data, description: data.description ?? null, idealFor, features, active };
+
+  let id = roomTypeId;
+  if (roomTypeId) {
+    await db.roomType.update({ where: { id: roomTypeId }, data: common });
+  } else {
+    if (!code) return { error: "El código es obligatorio (ej. \"focus\")" };
+    if (basePrice == null || creditsPerHour == null)
+      return { error: "Precio base y créditos/hora son obligatorios al crear" };
+    if (await db.roomType.findUnique({ where: { code } }))
+      return { error: `Ya existe un tipo con el código "${code}"` };
+    const created = await db.roomType.create({
+      data: {
+        ...common,
+        code,
+        baseHourlyPriceCents: Math.round(basePrice * 100),
+        memberHourlyPriceCents: memberPrice != null ? Math.round(memberPrice * 100) : null,
+        creditsPerHour,
+      },
+    });
+    id = created.id;
+  }
+  await audit({
+    actorId: session.user.id,
+    action: roomTypeId ? "roomtype.updated" : "roomtype.created",
+    entity: "RoomType",
+    entityId: id,
+    data: { name: data.name },
+  });
+  revalidatePath("/admin/catalog");
+  revalidatePath("/admin/rooms");
+  revalidatePath("/rooms");
+  revalidatePath("/memberships");
+  revalidatePath("/la-ceiba");
+  revalidatePath("/the-practice");
+  return { ok: true };
+}
+
+const roomSchema = z.object({
+  roomId: z.string().optional(),
+  locationId: z.string().min(1),
+  roomTypeId: z.string().min(1),
+  name: z.string().min(2).max(60),
+  description: z.string().max(500).optional(),
+  priceOverride: z.coerce.number().min(0).max(100000).optional(),
+});
+
+/**
+ * Alta y edición de salas asignadas a un establecimiento. El slug se deriva
+ * del nombre al crear; la ubicación no se cambia al editar (una sala física
+ * no cambia de edificio — se desactiva y se crea en la nueva ubicación).
+ */
+export async function upsertRoom(formData: FormData) {
+  const session = await requireAdmin();
+  const parsed = roomSchema.safeParse({
+    roomId: formData.get("roomId") || undefined,
+    locationId: formData.get("locationId"),
+    roomTypeId: formData.get("roomTypeId"),
+    name: formData.get("name"),
+    description: formData.get("description") || undefined,
+    priceOverride: formData.get("priceOverride") || undefined,
+  });
+  if (!parsed.success) return { error: "Datos inválidos" };
+
+  const { roomId, priceOverride, ...data } = parsed.data;
+  const amenities = parseList(formData.get("amenities"));
+  const hourlyPriceCentsOverride = priceOverride != null ? Math.round(priceOverride * 100) : null;
+
+  const [location, roomType] = await Promise.all([
+    db.location.findUnique({ where: { id: data.locationId } }),
+    db.roomType.findUnique({ where: { id: data.roomTypeId } }),
+  ]);
+  if (!location || !roomType) return { error: "Ubicación o tipo de sala inválidos" };
+
+  let id = roomId;
+  if (roomId) {
+    await db.room.update({
+      where: { id: roomId },
+      data: {
+        roomTypeId: data.roomTypeId,
+        name: data.name,
+        description: data.description ?? null,
+        amenities,
+        hourlyPriceCentsOverride,
+      },
+    });
+  } else {
+    const slug = slugify(data.name);
+    const dup = await db.room.findUnique({
+      where: { locationId_slug: { locationId: data.locationId, slug } },
+    });
+    if (dup) return { error: `Ya existe una sala "${slug}" en ${location.shortName}` };
+    const created = await db.room.create({
+      data: { ...data, description: data.description ?? null, slug, amenities, hourlyPriceCentsOverride },
+    });
+    id = created.id;
+  }
+  await audit({
+    actorId: session.user.id,
+    action: roomId ? "room.updated" : "room.created",
+    entity: "Room",
+    entityId: id,
+    data: { name: data.name, location: location.shortName, type: roomType.code },
+  });
+  revalidatePath("/admin/rooms");
+  revalidatePath("/rooms");
+  revalidatePath("/la-ceiba");
   return { ok: true };
 }
 

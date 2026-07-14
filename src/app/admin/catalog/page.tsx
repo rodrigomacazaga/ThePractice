@@ -1,12 +1,94 @@
+import { Plus } from "lucide-react";
+import type { RoomType } from "@prisma/client";
 import { requireAdmin } from "@/lib/auth-helpers";
 import { db } from "@/lib/db";
 import { formatCredits, formatMXN } from "@/lib/utils";
 import { PageHeader } from "@/components/dashboard/shell";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Field, Input } from "@/components/ui/form";
+import { Field, Input, Textarea } from "@/components/ui/form";
 import { ActionForm } from "@/components/dashboard/action-form";
-import { updatePlanPricing, updateRoomTypePricing } from "../actions";
+import { updatePlanPricing, updateRoomTypePricing, upsertRoomType } from "../actions";
+
+/** Atributos de un tipo de sala (los precios van en su formulario dedicado). */
+function RoomTypeAttributeFields({ rt }: { rt?: RoomType }) {
+  const uid = rt?.id ?? "new";
+  return (
+    <>
+      {rt && <input type="hidden" name="roomTypeId" value={rt.id} />}
+      <div className="grid gap-3 sm:grid-cols-2">
+        <Field label="Nombre" htmlFor={`rt-name-${uid}`}>
+          <Input
+            id={`rt-name-${uid}`}
+            name="name"
+            required
+            placeholder="Focus Room"
+            defaultValue={rt?.name}
+          />
+        </Field>
+        <Field label="Capacidad (personas)" htmlFor={`rt-cap-${uid}`}>
+          <Input
+            id={`rt-cap-${uid}`}
+            name="capacity"
+            type="number"
+            min={1}
+            max={30}
+            defaultValue={rt?.capacity ?? 2}
+          />
+        </Field>
+      </div>
+      <div className="mt-3">
+        <Field label="Descripción" htmlFor={`rt-desc-${uid}`}>
+          <Textarea
+            id={`rt-desc-${uid}`}
+            name="description"
+            rows={2}
+            defaultValue={rt?.description ?? ""}
+          />
+        </Field>
+      </div>
+      <div className="mt-3 grid gap-3 sm:grid-cols-2">
+        <Field label="Ideal para (separado por coma)" htmlFor={`rt-ideal-${uid}`}>
+          <Input
+            id={`rt-ideal-${uid}`}
+            name="idealFor"
+            placeholder="Psicología, Coaching"
+            defaultValue={rt?.idealFor.join(", ")}
+          />
+        </Field>
+        <Field label="Features (separadas por coma)" htmlFor={`rt-feat-${uid}`}>
+          <Input
+            id={`rt-feat-${uid}`}
+            name="features"
+            placeholder="2 sillones, Luz cálida"
+            defaultValue={rt?.features.join(", ")}
+          />
+        </Field>
+      </div>
+      <div className="mt-3 flex items-end gap-4">
+        <Field label="Orden" htmlFor={`rt-sort-${uid}`}>
+          <Input
+            id={`rt-sort-${uid}`}
+            name="sort"
+            type="number"
+            min={0}
+            defaultValue={rt?.sort ?? 0}
+            className="w-24"
+          />
+        </Field>
+        <label className="flex items-center gap-2 pb-2.5 text-sm font-medium">
+          <input
+            type="checkbox"
+            name="active"
+            defaultChecked={rt?.active ?? true}
+            className="h-4 w-4 accent-clay"
+          />
+          Activo (visible y reservable)
+        </label>
+      </div>
+    </>
+  );
+}
 
 export const dynamic = "force-dynamic";
 
@@ -93,7 +175,15 @@ export default async function AdminCatalogPage() {
         {roomTypes.map((rt) => (
           <Card key={rt.id}>
             <CardHeader className="flex-row items-center justify-between">
-              <CardTitle>{rt.name}</CardTitle>
+              <CardTitle>
+                {rt.name}
+                <span className="ml-2 font-mono text-xs font-normal text-stone">{rt.code}</span>
+                {!rt.active && (
+                  <Badge variant="default" className="ml-2">
+                    Inactivo
+                  </Badge>
+                )}
+              </CardTitle>
               <span className="text-xs text-stone">
                 {formatMXN(rt.baseHourlyPriceCents)}/h · {formatCredits(rt.creditsPerHour)} cr/h
               </span>
@@ -134,10 +224,63 @@ export default async function AdminCatalogPage() {
                   </Field>
                 </div>
               </ActionForm>
+
+              <details className="mt-5 border-t border-line pt-4">
+                <summary className="cursor-pointer text-sm font-semibold text-clay">
+                  Editar atributos
+                </summary>
+                <ActionForm action={upsertRoomType} submitLabel="Guardar atributos" className="mt-4">
+                  <RoomTypeAttributeFields rt={rt} />
+                </ActionForm>
+              </details>
             </CardContent>
           </Card>
         ))}
       </div>
+
+      {/* NUEVO TIPO DE SALA */}
+      <Card className="mt-6">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Plus className="h-4.5 w-4.5 text-clay" /> Nuevo tipo de sala
+          </CardTitle>
+          <CardDescription>
+            El código es la llave interna del tipo (minúsculas y guiones, ej.{" "}
+            <span className="font-mono">focus</span>) y no se puede cambiar después. Las salas
+            de este tipo se dan de alta en la sección Salas.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ActionForm action={upsertRoomType} submitLabel="Crear tipo de sala">
+            <div className="grid gap-3 sm:grid-cols-3">
+              <Field label="Código" htmlFor="rt-code-new">
+                <Input id="rt-code-new" name="code" required placeholder="focus" />
+              </Field>
+              <Field label="Precio/hora (MXN)" htmlFor="rt-bp-new">
+                <Input id="rt-bp-new" name="basePrice" type="number" min={0} required />
+              </Field>
+              <Field label="Con membresía (MXN)" htmlFor="rt-mp-new">
+                <Input id="rt-mp-new" name="memberPrice" type="number" min={0} />
+              </Field>
+            </div>
+            <div className="mt-3 grid gap-3 sm:grid-cols-3">
+              <Field label="Créditos/hora" htmlFor="rt-cph-new">
+                <Input
+                  id="rt-cph-new"
+                  name="creditsPerHour"
+                  type="number"
+                  min={0.5}
+                  step="0.5"
+                  defaultValue={1}
+                />
+              </Field>
+            </div>
+            <div className="mt-3">
+              <RoomTypeAttributeFields />
+            </div>
+          </ActionForm>
+        </CardContent>
+      </Card>
 
       {/* PAQUETES Y ADD-ONS (lectura) */}
       <div className="mt-12 grid gap-8 md:grid-cols-2">
