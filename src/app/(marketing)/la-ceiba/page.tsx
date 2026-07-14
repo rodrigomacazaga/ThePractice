@@ -232,7 +232,7 @@ export default async function LaCeibaLandingPage() {
               </Badge>
             </div>
             <h1 className="mt-6 font-display text-4xl font-bold tracking-tight text-balance sm:text-5xl lg:text-6xl">
-              Atiende en un espacio a tu altura, sin pagar renta fija.
+              Estrena tu espacio profesional sin pagar renta fija.
             </h1>
             <p className="mt-6 max-w-xl text-lg leading-relaxed text-paper/65">
               Espacios privados, equipados y listos para atender en Plaza La
