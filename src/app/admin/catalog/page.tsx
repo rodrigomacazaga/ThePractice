@@ -7,6 +7,7 @@ import { PageHeader } from "@/components/dashboard/shell";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Field, Input, Textarea } from "@/components/ui/form";
+import { Modal } from "@/components/ui/modal";
 import { ActionForm } from "@/components/dashboard/action-form";
 import { updatePlanPricing, updateRoomTypePricing, upsertRoomType } from "../actions";
 
@@ -230,14 +231,13 @@ export default async function AdminCatalogPage() {
                 </div>
               </ActionForm>
 
-              <details className="mt-5 border-t border-line pt-4">
-                <summary className="cursor-pointer text-sm font-semibold text-clay">
-                  Editar atributos
-                </summary>
-                <ActionForm action={upsertRoomType} submitLabel="Guardar atributos" className="mt-4">
-                  <RoomTypeAttributeFields rt={rt} />
-                </ActionForm>
-              </details>
+              <div className="mt-5 border-t border-line pt-4">
+                <Modal trigger="Editar atributos" title={`Editar ${rt.name}`}>
+                  <ActionForm action={upsertRoomType} submitLabel="Guardar atributos">
+                    <RoomTypeAttributeFields rt={rt} />
+                  </ActionForm>
+                </Modal>
+              </div>
             </CardContent>
           </Card>
             ))}

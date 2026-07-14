@@ -6,6 +6,7 @@ import { PageHeader } from "@/components/dashboard/shell";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Field, Input, Textarea, Select } from "@/components/ui/form";
+import { Modal } from "@/components/ui/modal";
 import { ActionForm } from "@/components/dashboard/action-form";
 import { upsertLocation } from "../actions";
 
@@ -163,7 +164,9 @@ export default async function AdminLocationsPage() {
                   </Badge>
                 </div>
 
-                <div className="mt-6 grid grid-cols-2 gap-3 text-center xl:grid-cols-4">
+                {/* 2×2 fijo: con 4 columnas los labels largos ("Practitioners")
+                     no caben y cualquier salida (wrap, break, truncate) se ve mal. */}
+                <div className="mt-6 grid grid-cols-2 gap-3 text-center">
                   {[
                     { label: "Salas", value: loc._count.rooms },
                     { label: "Practitioners", value: loc._count.practitioners },
@@ -173,9 +176,9 @@ export default async function AdminLocationsPage() {
                       value: `${lockersFree}/${loc.lockers.length}`,
                     },
                   ].map((s) => (
-                    <div key={s.label} className="min-w-0 rounded-xl bg-paper px-2 py-3">
+                    <div key={s.label} className="rounded-xl bg-paper px-2 py-3">
                       <p className="font-display text-lg font-bold">{s.value}</p>
-                      <p className="text-[10px] leading-tight font-semibold tracking-wide break-words text-stone uppercase">
+                      <p className="text-[10px] font-semibold tracking-wider whitespace-nowrap text-stone uppercase">
                         {s.label}
                       </p>
                     </div>
@@ -187,14 +190,13 @@ export default async function AdminLocationsPage() {
                   pública)
                 </p>
 
-                <details className="mt-4 border-t border-line pt-4">
-                  <summary className="cursor-pointer text-sm font-semibold text-clay">
-                    Editar ubicación
-                  </summary>
-                  <ActionForm action={upsertLocation} submitLabel="Guardar cambios" className="mt-4">
-                    <LocationFields loc={loc} />
-                  </ActionForm>
-                </details>
+                <div className="mt-4 border-t border-line pt-4">
+                  <Modal trigger="Editar ubicación" title={`Editar ${loc.shortName}`}>
+                    <ActionForm action={upsertLocation} submitLabel="Guardar cambios">
+                      <LocationFields loc={loc} />
+                    </ActionForm>
+                  </Modal>
+                </div>
               </CardContent>
             </Card>
           );
