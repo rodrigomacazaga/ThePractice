@@ -1,5 +1,6 @@
 import { Navbar } from "@/components/marketing/navbar";
 import { Footer } from "@/components/marketing/footer";
+import { AnalyticsScripts } from "@/components/analytics/analytics-scripts";
 
 export default function MarketingLayout({
   children,
@@ -11,6 +12,7 @@ export default function MarketingLayout({
       <Navbar />
       <main className="flex-1">{children}</main>
       <Footer />
+      <AnalyticsScripts />
     </div>
   );
 }
