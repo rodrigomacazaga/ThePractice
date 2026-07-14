@@ -101,9 +101,17 @@ export async function POST(req: NextRequest) {
         roomPreference: data.roomPreference,
         interestedPlan: data.interestedPlan === "unsure" ? null : data.interestedPlan,
         wantsLocker: data.wantsLocker,
+        startTimeframe: data.startTimeframe,
         message: data.message,
         source: data.source ?? "apply",
         locationId: location?.id,
+        utmSource: data.utmSource,
+        utmMedium: data.utmMedium,
+        utmCampaign: data.utmCampaign,
+        utmContent: data.utmContent,
+        utmTerm: data.utmTerm,
+        fbclid: data.fbclid,
+        gclid: data.gclid,
       },
     });
 

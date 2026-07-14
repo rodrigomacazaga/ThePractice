@@ -93,7 +93,7 @@ export default async function AdminOverviewPage() {
       _count: true,
     }),
     db.lead.aggregate({
-      where: { status: { in: ["DEPOSIT_PAID", "CONVERTED"] } },
+      where: { status: { in: ["DEPOSIT_PAID", "FOUNDER_RESERVED", "CONVERTED"] } },
       _sum: { depositCents: true },
     }),
     db.membershipPlan.findMany({ where: { active: true } }),
@@ -127,8 +127,12 @@ export default async function AdminOverviewPage() {
     CONTACTED: "Contactados",
     QUALIFIED: "Calificados",
     CALL_SCHEDULED: "Llamada agendada",
+    PAYMENT_LINK_SENT: "Pendiente de pago",
     DEPOSIT_PAID: "Depósito pagado",
+    FOUNDER_RESERVED: "Founder reservado",
     CONVERTED: "Convertidos",
+    NOT_COMPATIBLE: "No compatibles",
+    NOT_INTERESTED: "No interesados",
     LOST: "Perdidos",
   };
 

@@ -42,8 +42,12 @@ export default async function AdminLeadsPage({ searchParams }: Props) {
     { key: "CONTACTED", label: `Contactados (${countFor("CONTACTED")})` },
     { key: "QUALIFIED", label: `Calificados (${countFor("QUALIFIED")})` },
     { key: "CALL_SCHEDULED", label: `Llamada (${countFor("CALL_SCHEDULED")})` },
+    { key: "PAYMENT_LINK_SENT", label: `Pendiente de pago (${countFor("PAYMENT_LINK_SENT")})` },
     { key: "DEPOSIT_PAID", label: `Depósito (${countFor("DEPOSIT_PAID")})` },
+    { key: "FOUNDER_RESERVED", label: `Founder reservado (${countFor("FOUNDER_RESERVED")})` },
     { key: "CONVERTED", label: `Convertidos (${countFor("CONVERTED")})` },
+    { key: "NOT_COMPATIBLE", label: `No compatibles (${countFor("NOT_COMPATIBLE")})` },
+    { key: "NOT_INTERESTED", label: `No interesados (${countFor("NOT_INTERESTED")})` },
     { key: "LOST", label: `Perdidos (${countFor("LOST")})` },
   ];
 
@@ -98,8 +102,12 @@ export default async function AdminLeadsPage({ searchParams }: Props) {
                 preferredDays: lead.preferredDays,
                 preferredHours: lead.preferredHours,
                 wantsLocker: lead.wantsLocker,
+                startTimeframe: lead.startTimeframe,
                 message: lead.message,
                 source: lead.source,
+                campaign:
+                  [lead.utmSource, lead.utmMedium, lead.utmCampaign].filter(Boolean).join(" · ") ||
+                  null,
                 depositCents: lead.depositCents,
                 adminNotes: lead.adminNotes,
                 createdAtLabel: formatDateTimeMX(lead.createdAt),

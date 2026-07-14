@@ -24,8 +24,10 @@ export interface LeadData {
   preferredDays: string[];
   preferredHours: string | null;
   wantsLocker: boolean | null;
+  startTimeframe: string | null;
   message: string | null;
   source: string | null;
+  campaign: string | null; // resumen "utm_source · utm_medium · utm_campaign"
   depositCents: number | null;
   adminNotes: string | null;
   createdAtLabel: string;
@@ -37,18 +39,26 @@ const STATUS_VARIANT: Record<string, "clay" | "amber" | "sage" | "default" | "in
   CONTACTED: "amber",
   QUALIFIED: "amber",
   CALL_SCHEDULED: "ink",
+  PAYMENT_LINK_SENT: "ink",
   DEPOSIT_PAID: "sage",
+  FOUNDER_RESERVED: "sage",
   CONVERTED: "sage",
+  NOT_COMPATIBLE: "rust",
+  NOT_INTERESTED: "default",
   LOST: "default",
 };
 
 const STATUS_LABEL: Record<string, string> = {
-  NEW: "Nuevo",
+  NEW: "Aplicación recibida",
   CONTACTED: "Contactado",
   QUALIFIED: "Calificado",
   CALL_SCHEDULED: "Llamada agendada",
+  PAYMENT_LINK_SENT: "Pendiente de pago",
   DEPOSIT_PAID: "Depósito pagado",
+  FOUNDER_RESERVED: "Founder reservado",
   CONVERTED: "Convertido",
+  NOT_COMPATIBLE: "No compatible",
+  NOT_INTERESTED: "No interesado",
   LOST: "Perdido",
 };
 
@@ -110,7 +120,9 @@ export function LeadRow({ lead }: { lead: LeadData }) {
               {lead.preferredDays.length > 0 && <p>Días: {lead.preferredDays.join(", ")}</p>}
               {lead.preferredHours && <p>Horario: {lead.preferredHours}</p>}
               {lead.wantsLocker != null && <p>Locker: {lead.wantsLocker ? "sí" : "no"}</p>}
+              {lead.startTimeframe && <p>Quiere empezar: {lead.startTimeframe}</p>}
               {lead.locationName && <p>Ubicación: {lead.locationName}</p>}
+              {lead.campaign && <p className="col-span-2">Campaña: {lead.campaign}</p>}
             </div>
             {lead.message && (
               <p className="rounded-xl bg-paper p-4 text-xs leading-relaxed text-ink-mute">

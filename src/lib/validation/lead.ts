@@ -14,9 +14,20 @@ export const applySchema = z.object({
   roomPreference: z.enum(["standard", "premium", "studio", "mixed"]),
   interestedPlan: z.enum(["por-hora", "pro", "premium", "unsure"]),
   wantsLocker: z.boolean().optional().default(false),
+  startTimeframe: z.enum(["en-cuanto-abra", "1-3-meses", "3-6-meses", "explorando"], {
+    message: "¿Cuándo te gustaría empezar?",
+  }),
   message: z.string().max(2000).optional(),
   source: z.string().max(60).optional(),
   locationSlug: z.string().max(60).optional(),
+  // Atribución de campaña (opcional, la llena el cliente desde la URL)
+  utmSource: z.string().max(255).optional(),
+  utmMedium: z.string().max(255).optional(),
+  utmCampaign: z.string().max(255).optional(),
+  utmContent: z.string().max(255).optional(),
+  utmTerm: z.string().max(255).optional(),
+  fbclid: z.string().max(255).optional(),
+  gclid: z.string().max(255).optional(),
 });
 
 export type ApplyInput = z.infer<typeof applySchema>;
