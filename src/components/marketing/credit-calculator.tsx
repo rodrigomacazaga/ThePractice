@@ -26,7 +26,6 @@ const ROOM_THUMBS: Record<string, string> = {
   premium: "/images/room-premium.jpg",
   studio: "/images/room-studio.jpg",
   restore: "/images/room-restore.jpg",
-  movement: "/images/room-movement.jpg",
 };
 
 /**

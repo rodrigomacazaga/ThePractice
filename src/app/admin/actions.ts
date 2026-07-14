@@ -74,8 +74,12 @@ const leadStatusSchema = z.enum([
   "CONTACTED",
   "QUALIFIED",
   "CALL_SCHEDULED",
+  "PAYMENT_LINK_SENT",
   "DEPOSIT_PAID",
+  "FOUNDER_RESERVED",
   "CONVERTED",
+  "NOT_COMPATIBLE",
+  "NOT_INTERESTED",
   "LOST",
 ]);
 

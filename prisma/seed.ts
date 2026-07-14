@@ -191,22 +191,35 @@ async function main() {
     },
   });
 
-  const movementType = await db.roomType.upsert({
-    where: { code: "movement" },
+  const onlineType = await db.roomType.upsert({
+    where: { code: "online" },
     update: {},
     create: {
-      code: "movement",
-      name: "Movement Studio",
+      code: "online",
+      name: "Online Studio",
       description:
-        "Para barre, yoga, pilates mat y clases de movimiento en grupos pequeños. Piso de madera, espejo de pared completa y barra de barre.",
-      creditsPerHour: 2,
-      baseHourlyPriceCents: 80000,
-      memberHourlyPriceCents: 70000,
-      capacity: 8,
-      idealFor: ["Barre", "Yoga", "Pilates", "Movimiento"],
-      features: ["Piso de madera", "Espejo de pared completa", "Barra de barre", "Tapetes incluidos"],
+        "Cabina privada con acústica tratada, micrófono, iluminación y fondo cuidado. Para sesiones online, telepráctica, cursos y grabación de contenido.",
+      creditsPerHour: 1,
+      baseHourlyPriceCents: 32000,
+      memberHourlyPriceCents: 28000,
+      capacity: 1,
+      idealFor: ["Sesiones online", "Telepráctica", "Cursos y contenido"],
+      features: ["Acústica tratada", "Micrófono e iluminación", "Fondo profesional", "Escritorio ergonómico"],
       sort: 5,
     },
+  });
+
+  // La plaza ya cuenta con estudios de yoga/pilates/movimiento, así que el
+  // concepto Movement se retira: si una base de datos ya lo tenía seedeado,
+  // se desactiva (no se borra, por si tiene reservas históricas). "family"
+  // fue un reemplazo provisional que nunca llegó a main; se desactiva igual.
+  await db.roomType.updateMany({
+    where: { code: { in: ["movement", "family"] } },
+    data: { active: false },
+  });
+  await db.room.updateMany({
+    where: { slug: { in: ["movement-01", "family-01"] } },
+    data: { active: false },
   });
 
   // ------------------------------------------------------------
@@ -221,7 +234,7 @@ async function main() {
     { slug: "premium-01", name: "Premium 01", typeId: premiumType.id, description: "Sala amplia con sala de estar, TV y acústica reforzada.", amenities: ["TV 55”", "Sofá de 3 plazas"] },
     { slug: "studio-01", name: "Studio", typeId: studioType.id, description: "El espacio para talleres y grupos: proyector, pizarrón y mesa modular para 10.", amenities: ["Proyector", "Pizarrón", "Mesa modular"] },
     { slug: "restore-01", name: "Restore 01", typeId: restoreType.id, description: "Dos reposets reclinables, luz tenue y silencio. Para masaje y sesiones de descanso profundo.", amenities: ["2 reposets", "Toallas", "Luz regulable"] },
-    { slug: "movement-01", name: "Movement 01", typeId: movementType.id, description: "Piso de madera cálida, espejo de pared completa y barra de barre. Para clases de movimiento en grupos pequeños.", amenities: ["Espejo completo", "Barra de barre", "Tapetes"] },
+    { slug: "online-01", name: "Online 01", typeId: onlineType.id, description: "Cabina silenciosa con micrófono, luz de video y fondo cuidado. Para sesiones online, cursos y grabación de contenido.", amenities: ["Micrófono", "Luz de video", "Fondo profesional"] },
   ];
 
   const rooms: Record<string, { id: string }> = {};

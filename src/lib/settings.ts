@@ -12,6 +12,9 @@ export const SETTING_DEFAULTS = {
   "booking.min_advance_minutes": 30,
   "booking.max_days_ahead": 30,
   "credits.package_validity_days": 90,
+  // Depósito del programa Founder, en centavos MXN. 0 = aún no configurado
+  // (se define desde el panel admin / base de datos; nunca se hardcodea).
+  "founder.deposit_cents": 0,
 } as const;
 
 export type SettingKey = keyof typeof SETTING_DEFAULTS;

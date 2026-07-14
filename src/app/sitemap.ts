@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
  */
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const staticPages = [
-    "",
+    "/the-practice",
     "/for-practitioners",
     "/for-clients",
     "/how-it-works",
@@ -31,7 +31,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   ].map((path) => ({
     url: `${site.url}${path}`,
     changeFrequency: "weekly" as const,
-    priority: path === "" ? 1 : path === "/la-ceiba" ? 0.9 : 0.7,
+    // "/" redirige (307) a /la-ceiba, así que la landing es la página principal.
+    priority: path === "/la-ceiba" ? 1 : path === "/the-practice" ? 0.9 : 0.7,
   }));
 
   const [locations, practitioners] = await Promise.all([

@@ -56,7 +56,8 @@ export function PlanCard({
       </div>
       {founder && (
         <p className={cn("mt-1 text-xs", plan.highlighted ? "text-paper/50" : "text-stone")}>
-          Precio regular: <s>{formatMXN(plan.monthlyPriceCents)}</s> · de por vida para founders
+          Precio regular: <s>{formatMXN(plan.monthlyPriceCents)}</s> · tarifa founder
+          mientras tu membresía siga activa
         </p>
       )}
 

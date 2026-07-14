@@ -595,13 +595,21 @@ enum LeadType {
   CLIENT_INQUIRY
 }
 
+// Pipeline comercial de preventa. Flujo founder:
+// NEW → CONTACTED → QUALIFIED → (CALL_SCHEDULED) → PAYMENT_LINK_SENT
+// → DEPOSIT_PAID → FOUNDER_RESERVED → CONVERTED (miembro activo).
+// Salidas: NOT_COMPATIBLE (perfil no encaja), NOT_INTERESTED, LOST (genérico).
 enum LeadStatus {
   NEW
   CONTACTED
   QUALIFIED
   CALL_SCHEDULED
+  PAYMENT_LINK_SENT
   DEPOSIT_PAID
+  FOUNDER_RESERVED
   CONVERTED
+  NOT_COMPATIBLE
+  NOT_INTERESTED
   LOST
 }
 
@@ -622,8 +630,17 @@ model Lead {
   roomPreference  String? // "standard" | "premium" | "studio"
   interestedPlan  String? // código del plan
   wantsLocker     Boolean?
+  startTimeframe  String? // "en-cuanto-abra" | "1-3-meses" | "3-6-meses" | "explorando"
   message         String?
   source          String? // "landing-la-ceiba" | "apply" | "contact"
+  // Atribución de campaña (se guardan tal cual llegan en la URL)
+  utmSource       String?
+  utmMedium       String?
+  utmCampaign     String?
+  utmContent      String?
+  utmTerm         String?
+  fbclid          String?
+  gclid           String?
   locationId      String?
   location        Location?  @relation(fields: [locationId], references: [id])
   practitionerId  String? // si vino de un micrositio

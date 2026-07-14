@@ -11,7 +11,6 @@ const ROOM_PHOTOS: Record<string, string> = {
   premium: "/images/room-premium.jpg",
   studio: "/images/room-studio.jpg",
   restore: "/images/room-restore.jpg",
-  movement: "/images/room-movement.jpg",
 };
 
 /**
@@ -112,6 +111,18 @@ function RoomPlan({ code }: { code: string }) {
         <circle cx="82" cy="30" r="9" stroke={stroke} strokeWidth="2.5" />
         <circle cx="82" cy="54" r="9" stroke={stroke} strokeWidth="2.5" />
         <rect x="16" y="12" width="26" height="5" rx="2.5" fill={accent} />
+      </svg>
+    );
+  }
+  if (code === "online") {
+    // Escritorio con pantalla, asiento único y luz de video en acento.
+    return (
+      <svg viewBox="0 0 120 80" className="h-24 w-40 opacity-90" fill="none">
+        <rect x="4" y="4" width="112" height="72" rx="10" stroke={stroke} strokeWidth="2" opacity="0.5" />
+        <rect x="34" y="26" width="52" height="12" rx="4" stroke={stroke} strokeWidth="2.5" />
+        <rect x="50" y="14" width="20" height="6" rx="3" stroke={stroke} strokeWidth="2" />
+        <circle cx="60" cy="56" r="8" stroke={stroke} strokeWidth="2.5" />
+        <circle cx="94" cy="20" r="6" fill={accent} />
       </svg>
     );
   }
