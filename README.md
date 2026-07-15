@@ -43,7 +43,12 @@ npm run db:seed        # datos demo (ubicaciones, planes, practitioners, leads)
 npm run dev            # http://localhost:3000
 ```
 
-### Usuarios demo (contraseña: `ThePractice2026!`)
+### Usuarios demo
+
+La contraseña de los usuarios seedeados la define `SEED_PASSWORD` al correr el
+seed (default local: `demo125`). En producción `SEED_PASSWORD` es obligatoria y
+las cuentas administrativas se rotan fuera del repo — nunca publiques
+credenciales reales aquí.
 
 | Email | Rol | Estado |
 | --- | --- | --- |

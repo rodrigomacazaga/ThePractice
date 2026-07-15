@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { computeLotRemainders, protectedPackageCredits } from "@/lib/credits/lots";
 
 /**
  * Jobs recurrentes en serverless: no hay proceso persistente, así que
@@ -53,8 +54,16 @@ export async function expireCredits(): Promise<JobResult> {
     });
     if (already) continue;
 
-    // Expira como máximo lo que quede en el wallet (no dejar balance negativo)
-    const toExpire = Math.min(txn.amount, Math.max(txn.wallet.balance, 0));
+    // Expira solo el remanente REAL del lote (lo no consumido según la
+    // reconstrucción FIFO), nunca el monto original: los consumos posteriores
+    // ya gastaron parte de este lote y el resto del balance puede pertenecer
+    // a lotes más nuevos (p. ej. paquetes pagados).
+    const history = await db.creditTransaction.findMany({
+      where: { walletId: txn.walletId },
+      select: { id: true, type: true, amount: true, createdAt: true, expiresAt: true, note: true },
+    });
+    const remaining = computeLotRemainders(history).get(txn.id) ?? 0;
+    const toExpire = Math.min(remaining, Math.max(txn.wallet.balance, 0));
     if (toExpire <= 0) continue;
 
     await db.$transaction(async (tx) => {
@@ -117,8 +126,16 @@ export async function renewMemberships(): Promise<JobResult> {
 
       const wallet = m.practitioner.wallet;
       if (wallet && m.plan.includedCredits > 0) {
-        // Rollover limitado: lo que exceda el límite se pierde
-        const rolled = Math.min(wallet.balance, m.plan.rolloverLimit);
+        // Rollover limitado SOLO sobre créditos de membresía: los créditos
+        // de paquetes comprados (dinero pagado, con su propia vigencia)
+        // quedan protegidos del recorte.
+        const history = await tx.creditTransaction.findMany({
+          where: { walletId: wallet.id },
+          select: { id: true, type: true, amount: true, createdAt: true, expiresAt: true, note: true },
+        });
+        const shielded = Math.min(protectedPackageCredits(history, now), Math.max(wallet.balance, 0));
+        const membershipRemainder = Math.max(wallet.balance - shielded, 0);
+        const rolled = shielded + Math.min(membershipRemainder, m.plan.rolloverLimit);
         const newBalance = rolled + m.plan.includedCredits;
         await tx.creditWallet.update({
           where: { id: wallet.id },

@@ -20,7 +20,12 @@ import { PrismaClient } from "@prisma/client";
 import { hash } from "bcryptjs";
 
 const db = new PrismaClient();
-const PASSWORD = "ThePractice2026!";
+// Nunca hardcodear la contraseña: el repo es público. En local hay un
+// default cómodo; para producción SEED_PASSWORD es obligatoria.
+const PASSWORD = process.env.SEED_PASSWORD ?? "demo125";
+if (!process.env.SEED_PASSWORD && process.env.NODE_ENV === "production") {
+  throw new Error("Define SEED_PASSWORD para seedear producción");
+}
 
 async function main() {
   console.log("🌱 Seeding The Practice…");

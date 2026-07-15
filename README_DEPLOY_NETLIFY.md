@@ -21,7 +21,7 @@ Guía completa para llevar The Practice a producción en Netlify con
 
 ```bash
 DATABASE_URL="<pooled>" DIRECT_URL="<direct>" npm run db:push
-DATABASE_URL="<pooled>" DIRECT_URL="<direct>" npm run db:seed
+DATABASE_URL="<pooled>" DIRECT_URL="<direct>" SEED_PASSWORD="<contraseña-fuerte>" npm run db:seed
 ```
 
 > Para entornos con migraciones formales: `npx prisma migrate dev` en local
