@@ -1,7 +1,13 @@
 import type { Metadata } from "next";
 import { ArrowRight } from "lucide-react";
+import { db } from "@/lib/db";
+import { safeQuery } from "@/lib/safe-query";
+import { formatMXN, formatCredits } from "@/lib/utils";
+import { PUBLIC_LOCATION_STATUSES } from "@/config/site";
 import { ButtonLink } from "@/components/ui/button";
 import { SectionHeading } from "@/components/marketing/section-heading";
+
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Cómo funciona",
@@ -9,7 +15,16 @@ export const metadata: Metadata = {
     "De la aplicación a tu primera sesión: cómo funciona The Practice para practitioners y para clientes.",
 };
 
-export default function HowItWorksPage() {
+export default async function HowItWorksPage() {
+  const roomTypes = await safeQuery(
+    () =>
+      db.roomType.findMany({
+        where: { active: true, location: { status: { in: [...PUBLIC_LOCATION_STATUSES] } } },
+        orderBy: { sort: "asc" },
+      }),
+    []
+  );
+
   return (
     <>
       <section className="container-page py-20 lg:py-24">
@@ -26,7 +41,7 @@ export default function HowItWorksPage() {
           <p className="eyebrow">Si eres profesional</p>
           <div className="mt-8 grid gap-6 lg:grid-cols-4">
             {[
-              { step: "01", title: "Aplica", text: "Llena el formulario con tu especialidad y experiencia. Te contactamos en 48 horas." },
+              { step: "01", title: "Aplica", text: "Llena el formulario con tu especialidad y experiencia para asegurar tu lugar founder. Te contactamos para validar tu perfil." },
               { step: "02", title: "Verifica", text: "Sube tu cédula o certificación. La verificación protege a toda la comunidad." },
               { step: "03", title: "Elige tu plan", text: "Por hora, paquete de horas o membresía mensual con micrositio y directorio." },
               { step: "04", title: "Atiende", text: "Reserva salas desde tu panel, entra con tu código y atiende. Nosotros operamos el resto." },
@@ -63,8 +78,8 @@ export default function HowItWorksPage() {
               </div>
             ))}
           </div>
-          <ButtonLink href="/directory" variant="outline" size="lg" className="mt-10">
-            Explorar el directorio
+          <ButtonLink href="/la-ceiba#aplicar" variant="outline" size="lg" className="mt-10">
+            Estamos en preventa: déjanos tus datos
             <ArrowRight className="h-4 w-4" />
           </ButtonLink>
         </div>
@@ -80,15 +95,16 @@ export default function HowItWorksPage() {
             tone="paper"
           />
           <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {[
-              { room: "Talk / Consult Room", rate: "1 crédito/hora" },
-              { room: "Premium / Restore Room", rate: "1.5 créditos/hora" },
-              { room: "Sala con TV/proyector", rate: "1.5 créditos/hora" },
-              { room: "Studio / Movement", rate: "2 créditos/hora" },
-            ].map((r) => (
-              <div key={r.room} className="rounded-2xl border border-paper/10 bg-paper/5 p-6">
-                <p className="text-sm text-paper/60">{r.room}</p>
-                <p className="mt-2 font-display text-xl font-bold text-clay">{r.rate}</p>
+            {roomTypes.map((rt) => (
+              <div key={rt.id} className="rounded-2xl border border-paper/10 bg-paper/5 p-6">
+                <p className="text-sm text-paper/60">{rt.name}</p>
+                <p className="mt-2 font-display text-xl font-bold text-clay">
+                  {formatCredits(rt.creditsPerHour)}{" "}
+                  {rt.creditsPerHour === 1 ? "crédito" : "créditos"}/hora
+                </p>
+                <p className="mt-1 text-xs text-paper/50">
+                  {formatMXN(rt.baseHourlyPriceCents)} /hora
+                </p>
               </div>
             ))}
           </div>

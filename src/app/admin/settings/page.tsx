@@ -49,6 +49,12 @@ const FIELDS: { key: SettingKey; label: string; hint?: string; min?: number; max
     hint: "0 = sin configurar",
     min: 0,
   },
+  {
+    key: "founder.campaign_ends_ts",
+    label: "Fin de campaña Founder (epoch seg)",
+    hint: "0 = sin límite; el precio Founder deja de aplicar tras esta fecha",
+    min: 0,
+  },
 ];
 
 /** Valores efectivos + si cada uno es override local o heredado del global. */

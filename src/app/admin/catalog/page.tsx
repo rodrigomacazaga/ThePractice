@@ -50,7 +50,7 @@ function PlanAttributeFields({ plan, uid: uidProp }: { plan?: MembershipPlan; ui
           />
         </Field>
       </div>
-      <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
         <Field label="Rollover máx (h)" htmlFor={`pl-roll-${uid}`}>
           <Input
             id={`pl-roll-${uid}`}
@@ -59,16 +59,6 @@ function PlanAttributeFields({ plan, uid: uidProp }: { plan?: MembershipPlan; ui
             min={0}
             step="0.5"
             defaultValue={plan?.rolloverLimit ?? 0}
-          />
-        </Field>
-        <Field label="Horas de Studio" htmlFor={`pl-studio-${uid}`}>
-          <Input
-            id={`pl-studio-${uid}`}
-            name="studioHoursIncluded"
-            type="number"
-            min={0}
-            step="0.5"
-            defaultValue={plan?.studioHoursIncluded ?? 0}
           />
         </Field>
         <Field label="Micrositio" htmlFor={`pl-tier-${uid}`}>
@@ -94,8 +84,6 @@ function PlanAttributeFields({ plan, uid: uidProp }: { plan?: MembershipPlan; ui
         {(
           [
             ["highlighted", "Destacado (Popular)", plan?.highlighted ?? false],
-            ["primeAccess", "Horarios prime", plan?.primeAccess ?? false],
-            ["premiumRoomAccess", "Acceso a Premium", plan?.premiumRoomAccess ?? false],
             ["includesLocker", "Locker incluido", plan?.includesLocker ?? false],
             ["active", "Activo (visible)", plan?.active ?? true],
           ] as const

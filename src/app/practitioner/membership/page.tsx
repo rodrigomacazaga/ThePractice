@@ -6,16 +6,17 @@ import { PageHeader } from "@/components/dashboard/shell";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { CheckoutButton } from "@/components/dashboard/checkout-button";
+import { isFounderEligible } from "@/lib/founder";
 import { cn } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
 export default async function MembershipPage() {
-  const { profile } = await requirePractitioner();
-  const plans = await db.membershipPlan.findMany({
-    where: { active: true },
-    orderBy: { sort: "asc" },
-  });
+  const { session, profile } = await requirePractitioner();
+  const [plans, founderEligible] = await Promise.all([
+    db.membershipPlan.findMany({ where: { active: true }, orderBy: { sort: "asc" } }),
+    isFounderEligible(session.user.email),
+  ]);
 
   const membership = profile.membership;
   const activePlanCode = membership?.status === "ACTIVE" ? membership.plan.code : null;
@@ -72,6 +73,7 @@ export default async function MembershipPage() {
       <div className="mt-10 grid gap-6 md:grid-cols-2 xl:grid-cols-4">
         {plans.map((plan) => {
           const isCurrent = plan.code === activePlanCode;
+          const showFounder = founderEligible && plan.founderPriceCents != null;
           return (
             <div
               key={plan.id}
@@ -85,10 +87,25 @@ export default async function MembershipPage() {
                 {isCurrent && <Badge variant="ink">Tu plan</Badge>}
                 {plan.highlighted && !isCurrent && <Badge variant="clay">Popular</Badge>}
               </div>
-              <p className="mt-3 font-display text-2xl font-bold">
-                {formatMXN(plan.monthlyPriceCents)}
-                <span className="text-xs font-normal text-stone">/mes</span>
-              </p>
+              {showFounder ? (
+                <>
+                  <p className="mt-3 font-display text-2xl font-bold text-clay">
+                    {formatMXN(plan.founderPriceCents!)}
+                    <span className="text-xs font-normal text-stone">/mes</span>
+                  </p>
+                  <p className="mt-0.5 text-xs text-stone line-through">
+                    {formatMXN(plan.monthlyPriceCents)}/mes
+                  </p>
+                  <Badge variant="clay" className="mt-1">
+                    Precio Founder
+                  </Badge>
+                </>
+              ) : (
+                <p className="mt-3 font-display text-2xl font-bold">
+                  {formatMXN(plan.monthlyPriceCents)}
+                  <span className="text-xs font-normal text-stone">/mes</span>
+                </p>
+              )}
               {plan.includedCredits > 0 && (
                 <p className="mt-1 text-xs text-stone-deep">
                   {formatCredits(plan.includedCredits)} horas incluidas
@@ -111,6 +128,7 @@ export default async function MembershipPage() {
                   <CheckoutButton
                     kind="MEMBERSHIP"
                     code={plan.code}
+                    founder={showFounder}
                     variant={plan.highlighted ? "primary" : "outline"}
                     size="md"
                     className="w-full"

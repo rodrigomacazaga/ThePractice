@@ -29,6 +29,10 @@ export function ApplyForm({
 }) {
   const [status, setStatus] = useState<"idle" | "sending" | "done" | "error">("idle");
   const formStarted = useRef(false);
+  // Anti-bot: momento de montaje (para el chequeo de submit instantáneo) y
+  // honeypot (input oculto que solo un bot llenaría).
+  const mountedAt = useRef(Date.now());
+  const honeypot = useRef<HTMLInputElement>(null);
 
   // Tres genéricos: el schema usa coerce/default, así que el tipo de
   // entrada (lo que teclea el usuario) difiere del de salida (validado).
@@ -72,7 +76,13 @@ export function ApplyForm({
       const res = await fetch("/api/leads", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...data, ...campaign, type: "apply" }),
+        body: JSON.stringify({
+          ...data,
+          ...campaign,
+          type: "apply",
+          _hp: honeypot.current?.value ?? "",
+          _t: mountedAt.current,
+        }),
       });
       if (res.ok) {
         track("form_submit", { source, campaign: campaign.utmCampaign });
@@ -125,6 +135,16 @@ export function ApplyForm({
       className={cn("rounded-2xl border border-line bg-surface p-6 sm:p-8", className)}
       noValidate
     >
+      {/* Honeypot: oculto para humanos, cebo para bots. No es un campo real. */}
+      <input
+        ref={honeypot}
+        type="text"
+        name="company_website"
+        tabIndex={-1}
+        autoComplete="off"
+        aria-hidden="true"
+        className="absolute left-[-9999px] h-0 w-0 opacity-0"
+      />
       <div className="grid gap-5 sm:grid-cols-2">
         <Field label="Nombre completo" error={errors.name?.message} htmlFor="name">
           <Input id="name" placeholder="Ana García" {...register("name")} />

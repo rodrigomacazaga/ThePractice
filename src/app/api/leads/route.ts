@@ -1,11 +1,26 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { rateLimit } from "@/lib/rate-limit";
+import { rateLimitDistributed } from "@/lib/rate-limit";
 import { sendEmailSafe, emailTemplates } from "@/lib/email";
 import { applySchema, contactSchema, micrositeLeadSchema } from "@/lib/validation/lead";
 import { site } from "@/config/site";
 
 export const dynamic = "force-dynamic";
+
+/** ¿Ya llegó un lead de este email+tipo en las últimas 24 h? Evita duplicados
+ *  y la amplificación de correos ante reenvíos o bots. */
+async function isDuplicateLead(email: string, type: string): Promise<boolean> {
+  const since = new Date(Date.now() - 24 * 3600_000);
+  const existing = await db.lead.findFirst({
+    where: {
+      email: { equals: email.toLowerCase(), mode: "insensitive" },
+      type: type as never,
+      createdAt: { gt: since },
+    },
+    select: { id: true },
+  });
+  return existing != null;
+}
 
 /**
  * Endpoint público de captación:
@@ -15,7 +30,7 @@ export const dynamic = "force-dynamic";
  */
 export async function POST(req: NextRequest) {
   const ip = req.headers.get("x-forwarded-for")?.split(",")[0] ?? "unknown";
-  const { allowed } = rateLimit(`leads:${ip}`, { limit: 8, windowMs: 60_000 });
+  const { allowed } = await rateLimitDistributed(`leads:${ip}`, { limit: 8, windowMs: 60_000 });
   if (!allowed) {
     return NextResponse.json(
       { error: "Demasiadas solicitudes. Intenta en un minuto." },
@@ -30,11 +45,26 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "JSON inválido" }, { status: 400 });
   }
 
+  // Honeypot: campo oculto que un humano nunca llena. Si viene con contenido,
+  // fingimos éxito (no damos pistas al bot) pero no creamos nada.
+  const hp = (body as { _hp?: string })._hp;
+  if (typeof hp === "string" && hp.trim() !== "") {
+    return NextResponse.json({ ok: true });
+  }
+  // Anti-submit instantáneo: el form envía cuándo se montó; <2s = bot.
+  const startedAt = (body as { _t?: number })._t;
+  if (typeof startedAt === "number" && Date.now() - startedAt < 2000) {
+    return NextResponse.json({ ok: true });
+  }
+
   const type = (body as { type?: string }).type ?? "apply";
 
   try {
     if (type === "contact") {
       const data = contactSchema.parse(body);
+      if (await isDuplicateLead(data.email, "CONTACT")) {
+        return NextResponse.json({ ok: true });
+      }
       await db.lead.create({
         data: {
           type: "CONTACT",
@@ -61,6 +91,9 @@ export async function POST(req: NextRequest) {
       if (!practitioner) {
         return NextResponse.json({ error: "Practitioner no encontrado" }, { status: 404 });
       }
+      if (await isDuplicateLead(data.email, "CLIENT_INQUIRY")) {
+        return NextResponse.json({ ok: true });
+      }
       await db.lead.create({
         data: {
           type: "CLIENT_INQUIRY",
@@ -81,6 +114,9 @@ export async function POST(req: NextRequest) {
 
     // apply (default)
     const data = applySchema.parse(body);
+    if (await isDuplicateLead(data.email, "PRACTITIONER_APPLICATION")) {
+      return NextResponse.json({ ok: true });
+    }
     const location = data.locationSlug
       ? await db.location.findUnique({ where: { slug: data.locationSlug } })
       : null;

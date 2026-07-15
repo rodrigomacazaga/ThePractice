@@ -14,7 +14,18 @@ export const site = {
   email: "hola@thepractice.mx",
   phone: "+52 442 161 20 40",
   instagram: "https://instagram.com/thepractice.mx",
+  // Claim founder legalmente cuidado — ÚNICA fuente. No usar "de por vida".
+  founderClaim:
+    "Conserva tu tarifa Founder mientras mantengas activa tu membresía, conforme a los términos del programa.",
+  // Roadmap de sedes (la única sede real —La Ceiba— vive en la DB).
+  roadmapSedes: ["Juriquilla", "Centro Sur"],
 } as const;
+
+/**
+ * Estatus de ubicación con presencia pública (visibles y —para PRESALE—
+ * reservables por founders). Usar en todos los queries de marketing/reserva.
+ */
+export const PUBLIC_LOCATION_STATUSES = ["OPEN", "PRESALE"] as const;
 
 export const mainNav = [
   { label: "Para profesionales", href: "/for-practitioners" },

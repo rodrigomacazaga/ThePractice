@@ -366,6 +366,7 @@ const BOOKING_SETTING_KEYS: SettingKey[] = [
   "booking.max_days_ahead",
   "booking.pending_payment_hold_minutes",
   "founder.deposit_cents",
+  "founder.campaign_ends_ts",
 ];
 
 /**
@@ -430,7 +431,6 @@ const planSchema = z.object({
   founderPrice: z.coerce.number().min(0).max(1000000).optional(),
   includedCredits: z.coerce.number().min(0).max(500).optional(),
   rolloverLimit: z.coerce.number().min(0).max(500),
-  studioHoursIncluded: z.coerce.number().min(0).max(100),
   micrositeTier: z.enum(["BASIC", "PRO", "PREMIUM", "FEATURED"]),
   sort: z.coerce.number().int().min(0).max(999),
 });
@@ -451,7 +451,6 @@ export async function upsertPlan(formData: FormData) {
     founderPrice: formData.get("founderPrice") || undefined,
     includedCredits: formData.get("includedCredits") || undefined,
     rolloverLimit: formData.get("rolloverLimit"),
-    studioHoursIncluded: formData.get("studioHoursIncluded"),
     micrositeTier: formData.get("micrositeTier"),
     sort: formData.get("sort"),
   });
@@ -461,8 +460,6 @@ export async function upsertPlan(formData: FormData) {
   const features = parseList(formData.get("features"));
   const flags = {
     highlighted: formData.get("highlighted") === "on",
-    primeAccess: formData.get("primeAccess") === "on",
-    premiumRoomAccess: formData.get("premiumRoomAccess") === "on",
     includesLocker: formData.get("includesLocker") === "on",
     active: formData.get("active") === "on",
   };

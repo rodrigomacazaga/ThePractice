@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { hash } from "bcryptjs";
 import { db } from "@/lib/db";
-import { rateLimit } from "@/lib/rate-limit";
+import { rateLimitDistributed } from "@/lib/rate-limit";
 import { registerSchema } from "@/lib/validation/auth";
 import { slugify } from "@/lib/utils";
 
@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 
 export async function POST(req: NextRequest) {
   const ip = req.headers.get("x-forwarded-for")?.split(",")[0] ?? "unknown";
-  const { allowed } = rateLimit(`register:${ip}`, { limit: 5, windowMs: 60_000 });
+  const { allowed } = await rateLimitDistributed(`register:${ip}`, { limit: 5, windowMs: 60_000 });
   if (!allowed) {
     return NextResponse.json({ error: "Demasiados intentos. Espera un minuto." }, { status: 429 });
   }

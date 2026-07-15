@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { ArrowRight } from "lucide-react";
+import { site } from "@/config/site";
 import { ButtonLink } from "@/components/ui/button";
 import { LogoMark } from "@/components/brand/logo";
 
@@ -36,8 +37,8 @@ export default function AboutPage() {
             </p>
             <p>
               Empezamos en Querétaro con The Practice La Ceiba. El plan es una
-              red nacional: Juriquilla, Zibatá, Polanco, San Pedro y más — una
-              sola membresía, muchas puertas.
+              red que crece ciudad por ciudad: {site.roadmapSedes.join(" y ")} y
+              más sedes en evaluación — una sola membresía, muchas puertas.
             </p>
           </div>
         </div>

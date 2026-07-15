@@ -151,6 +151,7 @@ model Favorite {
 
 enum LocationStatus {
   OPEN
+  PRESALE // en preventa: reservable por founders, visible como "Preventa"
   COMING_SOON
   CLOSED
 }
@@ -362,10 +363,11 @@ model MembershipPlan {
   rolloverLimit      Float         @default(0) // máximo de créditos que arrastran al siguiente mes
   micrositeTier      MicrositeTier @default(BASIC)
   features           String[]
-  primeAccess        Boolean       @default(false) // prioridad en horarios prime
-  premiumRoomAccess  Boolean       @default(false)
+  // Modelo de acceso ABIERTO: cualquier miembro reserva cualquier sala y paga
+  // su tarifa de miembro (memberHourlyPriceCents). No hay gates por plan; los
+  // flags primeAccess/premiumRoomAccess/studioHoursIncluded se retiraron por no
+  // tener mecánica que los respaldara.
   includesLocker     Boolean       @default(false)
-  studioHoursIncluded Float        @default(0)
   highlighted        Boolean       @default(false) // "Most popular"
   sort               Int           @default(0)
   active             Boolean       @default(true)

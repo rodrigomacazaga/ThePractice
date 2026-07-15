@@ -3,6 +3,7 @@ import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { getPaymentProvider } from "@/lib/payments";
+import { isFounderEligible } from "@/lib/founder";
 
 export const dynamic = "force-dynamic";
 
@@ -38,7 +39,12 @@ export async function POST(req: NextRequest) {
     if (!plan || !plan.active) {
       return NextResponse.json({ error: "Plan no encontrado" }, { status: 404 });
     }
-    const useFounder = founder && plan.founderPriceCents != null;
+    // El precio founder se valida server-side contra la elegibilidad real
+    // (lead que aseguró su lugar + ventana abierta), nunca contra el body.
+    const useFounder =
+      founder === true &&
+      plan.founderPriceCents != null &&
+      (await isFounderEligible(session.user.email));
     amountCents = useFounder ? plan.founderPriceCents! : plan.monthlyPriceCents;
     description = `Membresía ${plan.name}${useFounder ? " (founder)" : ""} — The Practice`;
     metadata.planCode = plan.code;

@@ -1,14 +1,21 @@
 import type { Metadata } from "next";
+import { db } from "@/lib/db";
+import { safeQuery } from "@/lib/safe-query";
+import { formatMXN } from "@/lib/utils";
+import { site, PUBLIC_LOCATION_STATUSES } from "@/config/site";
 import { SectionHeading } from "@/components/marketing/section-heading";
 import { FaqList } from "@/components/marketing/faq";
 import { ButtonLink } from "@/components/ui/button";
+
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Preguntas frecuentes",
   description: "Todo sobre membresías, salas, créditos, verificación, reservas y políticas de The Practice.",
 };
 
-const SECTIONS: { title: string; items: { q: string; a: string }[] }[] = [
+function buildSections(minHourly: number): { title: string; items: { q: string; a: string }[] }[] {
+  return [
   {
     title: "Para profesionales",
     items: [
@@ -18,7 +25,7 @@ const SECTIONS: { title: string; items: { q: string; a: string }[] }[] = [
       },
       {
         q: "¿Cuánto cuesta?",
-        a: "Puedes empezar reservando por hora, sin membresía, desde $320 MXN/hora. También puedes comprar paquetes de horas con descuento. Y si atiendes cada semana, una membresía (Pro o Premium) te da horas incluidas, mejor tarifa, micrositio y directorio.",
+        a: `Puedes empezar reservando por hora, sin membresía, desde ${formatMXN(minHourly)} MXN/hora. También puedes comprar paquetes de horas con descuento. Y si atiendes cada semana, una membresía (Pro o Premium) te da horas incluidas, mejor tarifa, micrositio y directorio.`,
       },
       {
         q: "¿Cómo funcionan los créditos?",
@@ -64,7 +71,7 @@ const SECTIONS: { title: string; items: { q: string; a: string }[] }[] = [
       },
       {
         q: "¿Dónde están ubicados?",
-        a: "La primera ubicación es The Practice La Ceiba en Querétaro. Juriquilla, Zibatá y más ubicaciones están en evaluación.",
+        a: `La primera ubicación es The Practice La Ceiba en Querétaro. ${site.roadmapSedes.join(" y ")} y más ubicaciones están en evaluación.`,
       },
       {
         q: "¿Guardan información clínica de los pacientes?",
@@ -72,9 +79,21 @@ const SECTIONS: { title: string; items: { q: string; a: string }[] }[] = [
       },
     ],
   },
-];
+  ];
+}
 
-export default function FaqPage() {
+export default async function FaqPage() {
+  const roomTypes = await safeQuery(
+    () =>
+      db.roomType.findMany({
+        where: { active: true, location: { status: { in: [...PUBLIC_LOCATION_STATUSES] } } },
+      }),
+    []
+  );
+  const minHourly =
+    roomTypes.length > 0 ? Math.min(...roomTypes.map((rt) => rt.baseHourlyPriceCents)) : 32000;
+  const sections = buildSections(minHourly);
+
   return (
     <section className="container-page py-20 lg:py-24">
       <SectionHeading
@@ -83,7 +102,7 @@ export default function FaqPage() {
         description="Si no encuentras lo que buscas, escríbenos: hola@thepractice.mx"
       />
       <div className="mt-12 max-w-3xl space-y-12">
-        {SECTIONS.map((section) => (
+        {sections.map((section) => (
           <div key={section.title}>
             <h2 className="eyebrow">{section.title}</h2>
             <div className="mt-4">

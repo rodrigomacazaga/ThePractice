@@ -340,18 +340,14 @@ async function main() {
       includedCredits: 45,
       rolloverLimit: 10,
       micrositeTier: "PREMIUM" as const,
-      primeAccess: true,
-      premiumRoomAccess: true,
       includesLocker: true,
       features: [
         "45 horas de sala al mes",
         "Perfil destacado en directorio",
-        "Prioridad en horarios prime",
-        "Acceso a Premium Room",
         "Locker incluido sin costo",
         "Reporte mensual de leads",
         "Horarios recurrentes",
-        "Descuento en horas adicionales",
+        "Tarifa preferente en horas adicionales",
       ],
       sort: 3,
     },
@@ -364,15 +360,11 @@ async function main() {
       includedCredits: 90,
       rolloverLimit: 15,
       micrositeTier: "FEATURED" as const,
-      primeAccess: true,
-      premiumRoomAccess: true,
       includesLocker: true,
-      studioHoursIncluded: 4,
       features: [
         "90 horas de sala al mes",
         "Horarios fijos garantizados",
         "Locker privado grande incluido",
-        "4 horas de Studio al mes",
         "Micrositio destacado",
         "Leads prioritarios",
         "Soporte concierge",
@@ -637,15 +629,17 @@ async function main() {
 
     practitioners[p.slug] = { id: profile.id, userId: user.id, walletId: wallet.id };
 
-    // Micrositio
+    // Micrositio. Estos practitioners son DEMO (emails @thepractice.mx): nunca
+    // deben quedar publicados/indexables en producción — solo en dev/preview.
+    const isProd = process.env.NODE_ENV === "production";
     await db.microsite.upsert({
       where: { practitionerId: profile.id },
-      update: {},
+      update: isProd ? { published: false } : {},
       create: {
         practitionerId: profile.id,
         tier: p.planCode === "premium" ? "PREMIUM" : p.planCode === "pro" ? "PRO" : "BASIC",
-        published: p.approved,
-        allowBooking: p.approved && p.planCode !== "flex",
+        published: p.approved && !isProd,
+        allowBooking: p.approved && p.planCode !== "flex" && !isProd,
         seoTitle: `${p.name} — ${p.headline}`,
         seoDescription: p.bio.slice(0, 150),
       },

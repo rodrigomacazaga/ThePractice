@@ -10,6 +10,7 @@ import { SectionHeading } from "@/components/marketing/section-heading";
 import { PlanCard } from "@/components/marketing/plan-card";
 import { FaqList } from "@/components/marketing/faq";
 import { CreditCalculator } from "@/components/marketing/credit-calculator";
+import { site, PUBLIC_LOCATION_STATUSES } from "@/config/site";
 
 export const dynamic = "force-dynamic";
 
@@ -30,7 +31,7 @@ const PRICING_FAQ = [
   },
   {
     q: "¿Cómo funcionan los créditos?",
-    a: "Los créditos son la mecánica interna de las membresías: cada plan te da una bolsa mensual que puedes usar en cualquier espacio. Una hora de sala estándar consume 1 crédito; las salas premium 1.5 y el Studio o Movement 2. Así usas cualquier tipo de sala sin cambiar de plan.",
+    a: "Los créditos son la mecánica interna de las membresías: cada plan te da una bolsa mensual que puedes usar en cualquier espacio. Una hora de sala estándar consume 1 crédito; las salas premium 1.5 y el Studio 2. Así usas cualquier tipo de sala sin cambiar de plan.",
   },
   {
     q: "¿Las horas expiran?",
@@ -68,7 +69,7 @@ export default async function MembershipsPage() {
     safeQuery(
       () =>
         db.roomType.findMany({
-          where: { active: true, location: { status: "OPEN" } },
+          where: { active: true, location: { status: { in: [...PUBLIC_LOCATION_STATUSES] } } },
           orderBy: { sort: "asc" },
         }),
       []
@@ -249,9 +250,9 @@ export default async function MembershipsPage() {
             </div>
 
             <p className="mt-8 text-center text-sm text-stone-deep">
-              Practitioners fundadores de La Ceiba:{" "}
+              {site.founderClaim}{" "}
               <Link href="/la-ceiba" className="font-semibold text-clay hover:underline">
-                precios founder de por vida →
+                Membresías founder — La Ceiba →
               </Link>
             </p>
           </div>

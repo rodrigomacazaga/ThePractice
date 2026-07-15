@@ -69,6 +69,9 @@ export default async function LocationDetailPage({ params }: Props) {
   );
 
   const isOpen = location.status === "OPEN";
+  const isPresale = location.status === "PRESALE";
+  const statusLabel = isOpen ? "Abierto" : isPresale ? "Preventa" : "Próximamente";
+  const statusVariant = isOpen ? "sage" : isPresale ? "clay" : "amber";
 
   return (
     <>
@@ -76,9 +79,7 @@ export default async function LocationDetailPage({ params }: Props) {
       <section className="bg-ink text-paper">
         <div className="container-page grid items-center gap-12 py-20 lg:grid-cols-2 lg:py-24">
           <div>
-            <Badge variant={isOpen ? "sage" : "amber"}>
-              {isOpen ? "Abierto" : "Próximamente"}
-            </Badge>
+            <Badge variant={statusVariant}>{statusLabel}</Badge>
             <p className="mt-6 eyebrow-light">The Practice</p>
             <h1 className="mt-2 font-display text-4xl font-bold tracking-tight sm:text-5xl">
               {location.shortName}

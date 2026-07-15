@@ -17,6 +17,8 @@ export const SETTING_DEFAULTS = {
   // Depósito del programa Founder, en centavos MXN. 0 = aún no configurado
   // (se define desde el panel admin / base de datos; nunca se hardcodea).
   "founder.deposit_cents": 0,
+  // Fin de la ventana founder, epoch en segundos. 0 = sin límite.
+  "founder.campaign_ends_ts": 0,
 } as const;
 
 export type SettingKey = keyof typeof SETTING_DEFAULTS;

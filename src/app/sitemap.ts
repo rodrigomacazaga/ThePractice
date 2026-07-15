@@ -1,7 +1,7 @@
 import type { MetadataRoute } from "next";
 import { db } from "@/lib/db";
 import { safeQuery } from "@/lib/safe-query";
-import { site } from "@/config/site";
+import { site, PUBLIC_LOCATION_STATUSES } from "@/config/site";
 
 export const dynamic = "force-dynamic";
 
@@ -37,7 +37,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   const [locations, practitioners] = await Promise.all([
     safeQuery(
-      () => db.location.findMany({ where: { status: "OPEN" }, select: { slug: true } }),
+      () =>
+        db.location.findMany({
+          where: { status: { in: [...PUBLIC_LOCATION_STATUSES] } },
+          select: { slug: true },
+        }),
       []
     ),
     safeQuery(

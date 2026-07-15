@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 import { db } from "@/lib/db";
 import { safeQuery } from "@/lib/safe-query";
-import { site } from "@/config/site";
+import { site, PUBLIC_LOCATION_STATUSES } from "@/config/site";
 import { formatMXN, formatCredits } from "@/lib/utils";
 import { ButtonLink } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -94,7 +94,7 @@ export default async function ThePracticePage() {
     safeQuery(
       () =>
         db.roomType.findMany({
-          where: { active: true, location: { status: "OPEN" } },
+          where: { active: true, location: { status: { in: [...PUBLIC_LOCATION_STATUSES] } } },
           orderBy: { sort: "asc" },
         }),
       []
@@ -534,8 +534,7 @@ export default async function ThePracticePage() {
             Sé parte de la primera sede de la red.
           </h2>
           <p className="mx-auto mt-5 max-w-xl text-lg text-paper/60">
-            Cupo limitado de practitioners fundadores en La Ceiba, con precio
-            preferente de por vida.
+            Cupo limitado de practitioners fundadores en La Ceiba. {site.founderClaim}
           </p>
           <div className="mt-9 flex flex-wrap justify-center gap-3">
             <ButtonLink href="/la-ceiba" variant="light" size="xl">

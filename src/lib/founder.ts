@@ -1,4 +1,5 @@
 import { getSetting } from "@/lib/settings";
+import { db } from "@/lib/db";
 
 /**
  * Programa Founder — The Practice La Ceiba.
@@ -32,4 +33,35 @@ export const FOUNDER_RESERVATION_CONCEPT =
 export async function getFounderDepositCents(locationId?: string): Promise<number | null> {
   const cents = await getSetting("founder.deposit_cents", locationId);
   return cents > 0 ? cents : null;
+}
+
+/**
+ * ¿Sigue abierta la ventana founder? `founder.campaign_ends_ts` es un timestamp
+ * epoch en SEGUNDOS (0 = sin límite, siempre abierta).
+ */
+export async function isFounderWindowOpen(): Promise<boolean> {
+  const endsTs = await getSetting("founder.campaign_ends_ts");
+  if (endsTs <= 0) return true;
+  return Date.now() < endsTs * 1000;
+}
+
+const FOUNDER_LEAD_STATUSES = ["DEPOSIT_PAID", "FOUNDER_RESERVED", "CONVERTED"] as const;
+
+/**
+ * Elegibilidad founder: SOLO si el email tiene un lead que ya aseguró su lugar
+ * (depósito pagado / reservado / convertido) Y la ventana sigue abierta. Es la
+ * fuente de verdad server-side: la UI puede mostrar el precio founder, pero el
+ * cobro se valida aquí, nunca contra el body del request.
+ */
+export async function isFounderEligible(email?: string | null): Promise<boolean> {
+  if (!email) return false;
+  if (!(await isFounderWindowOpen())) return false;
+  const lead = await db.lead.findFirst({
+    where: {
+      email: { equals: email, mode: "insensitive" },
+      status: { in: [...FOUNDER_LEAD_STATUSES] },
+    },
+    select: { id: true },
+  });
+  return lead != null;
 }

@@ -6,6 +6,7 @@ import { requirePractitioner } from "@/lib/auth-helpers";
 import { db } from "@/lib/db";
 import { getDayGrid } from "@/lib/bookings/engine";
 import { getSetting } from "@/lib/settings";
+import { PUBLIC_LOCATION_STATUSES } from "@/config/site";
 import { PageHeader } from "@/components/dashboard/shell";
 import { EmptyState } from "@/components/ui/empty-state";
 import { DoorClosed } from "lucide-react";
@@ -22,7 +23,7 @@ export default async function BookRoomPage({ searchParams }: Props) {
   const sp = await searchParams;
 
   const locations = await db.location.findMany({
-    where: { status: "OPEN" },
+    where: { status: { in: [...PUBLIC_LOCATION_STATUSES] } },
     orderBy: { sort: "asc" },
   });
 

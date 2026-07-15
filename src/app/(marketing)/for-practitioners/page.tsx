@@ -3,11 +3,13 @@ import Link from "next/link";
 import { ArrowRight, Building2, CalendarClock, Globe2, Landmark, Lock, Wallet } from "lucide-react";
 import { db } from "@/lib/db";
 import { safeQuery } from "@/lib/safe-query";
+import { formatMXN } from "@/lib/utils";
 import { ButtonLink } from "@/components/ui/button";
 import { SectionHeading } from "@/components/marketing/section-heading";
 import { PlanCard } from "@/components/marketing/plan-card";
 import { RoomTypeCard } from "@/components/marketing/room-type-card";
 import { FaqList } from "@/components/marketing/faq";
+import { site, PUBLIC_LOCATION_STATUSES } from "@/config/site";
 
 export const dynamic = "force-dynamic";
 
@@ -53,12 +55,15 @@ export default async function ForPractitionersPage() {
     safeQuery(
       () =>
         db.roomType.findMany({
-          where: { active: true, location: { status: "OPEN" } },
+          where: { active: true, location: { status: { in: [...PUBLIC_LOCATION_STATUSES] } } },
           orderBy: { sort: "asc" },
         }),
       []
     ),
   ]);
+
+  const minHourly =
+    roomTypes.length > 0 ? Math.min(...roomTypes.map((rt) => rt.baseHourlyPriceCents)) : 32000;
 
   return (
     <>
@@ -95,7 +100,7 @@ export default async function ForPractitionersPage() {
           {[
             { n: "$15,000+", d: "cuesta al mes un consultorio propio en zona premium, con servicios y mobiliario." },
             { n: "30–40%", d: "de las horas de un consultorio fijo se quedan vacías — pero la renta no baja." },
-            { n: "desde $280", d: "por hora de sala premium en The Practice, con todo incluido." },
+            { n: `desde ${formatMXN(minHourly)}`, d: "por hora de sala en The Practice, sin renta fija y con todo incluido." },
           ].map((item) => (
             <div key={item.n}>
               <p className="font-display text-4xl font-bold tracking-tight text-ink">{item.n}</p>
@@ -234,8 +239,7 @@ export default async function ForPractitionersPage() {
             Aplica hoy. Atiende esta misma semana.
           </h2>
           <p className="mx-auto mt-3 max-w-md text-paper/60">
-            La verificación toma 48 horas. Los practitioners founders de La
-            Ceiba obtienen precio preferente de por vida.
+            La verificación toma 48 horas. {site.founderClaim}
           </p>
           <ButtonLink href="/apply" variant="light" size="xl" className="mt-8">
             Aplicar como practitioner

@@ -14,6 +14,7 @@ export const dynamic = "force-dynamic";
 
 const STATUS_LABEL: Record<Location["status"], string> = {
   OPEN: "Abierta",
+  PRESALE: "Preventa",
   COMING_SOON: "Próximamente",
   CLOSED: "Cerrada",
 };
@@ -159,7 +160,11 @@ export default async function AdminLocationsPage() {
                       {loc.closingHour}:00
                     </p>
                   </div>
-                  <Badge variant={loc.status === "OPEN" ? "sage" : "amber"}>
+                  <Badge
+                    variant={
+                      loc.status === "OPEN" ? "sage" : loc.status === "PRESALE" ? "clay" : "amber"
+                    }
+                  >
                     {STATUS_LABEL[loc.status]}
                   </Badge>
                 </div>

@@ -31,3 +31,40 @@ setInterval(() => {
   const now = Date.now();
   for (const [k, v] of buckets) if (v.resetAt < now) buckets.delete(k);
 }, 300_000).unref?.();
+
+/**
+ * Rate limit DISTRIBUIDO: cuenta compartida entre instancias serverless vía
+ * Upstash Redis REST (INCR + EXPIRE atómicos, sin dependencia — solo fetch).
+ * Si no hay UPSTASH_REDIS_REST_URL/TOKEN configurados (dev), cae al limitador
+ * en memoria. Misma firma de retorno que rateLimit para no tocar los callers.
+ */
+export async function rateLimitDistributed(
+  key: string,
+  opts: { limit: number; windowMs: number } = { limit: 10, windowMs: 60_000 }
+): Promise<{ allowed: boolean; remaining: number }> {
+  const url = process.env.UPSTASH_REDIS_REST_URL;
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+  if (!url || !token) return rateLimit(key, opts);
+
+  const windowSec = Math.ceil(opts.windowMs / 1000);
+  try {
+    // Pipeline atómico: INCR devuelve el conteo; en el primer hit fijamos TTL.
+    const res = await fetch(`${url}/pipeline`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify([
+        ["INCR", `rl:${key}`],
+        ["EXPIRE", `rl:${key}`, String(windowSec), "NX"],
+      ]),
+      cache: "no-store",
+    });
+    if (!res.ok) return rateLimit(key, opts);
+    const data = (await res.json()) as Array<{ result: number }>;
+    const count = data[0]?.result ?? 1;
+    const allowed = count <= opts.limit;
+    return { allowed, remaining: Math.max(0, opts.limit - count) };
+  } catch {
+    // Ante cualquier fallo del servicio, degradar al limitador local (no bloquear).
+    return rateLimit(key, opts);
+  }
+}

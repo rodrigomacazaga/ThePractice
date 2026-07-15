@@ -30,13 +30,13 @@ export default function ApplyPage() {
             },
             {
               icon: BadgeCheck,
-              title: "Verificación en 48 horas",
-              text: "Revisamos tu aplicación y te contactamos para una llamada breve de bienvenida.",
+              title: "Aseguras tu lugar founder",
+              text: "Aplica hoy para reservar tu lugar founder en La Ceiba antes de la apertura.",
             },
             {
               icon: CalendarClock,
-              title: "Empieza cuando quieras",
-              text: "Sin plazos forzosos: por hora, paquete de horas o membresía mensual.",
+              title: "Te contactamos para validar tu perfil",
+              text: "Revisamos tu aplicación y te contactamos para validar tu perfil y contarte los siguientes pasos.",
             },
           ].map((item) => (
             <div key={item.title} className="flex gap-4">

@@ -15,6 +15,15 @@ export function LocationCard({
   founding?: boolean;
 }) {
   const isOpen = location.status === "OPEN";
+  const isPresale = location.status === "PRESALE";
+  const badgeLabel = founding
+    ? "Founding Location"
+    : isOpen
+      ? "Abierto"
+      : isPresale
+        ? "Preventa"
+        : "Próximamente";
+  const badgeVariant = founding || isPresale ? "clay" : isOpen ? "sage" : "amber";
   const inner = (
     <div className="group relative flex h-full flex-col justify-between overflow-hidden rounded-2xl border border-line bg-ink p-7 text-paper shadow-(--shadow-card) transition-shadow hover:shadow-(--shadow-lift)">
       <div className="absolute -top-8 -right-8 opacity-[0.07] transition-opacity group-hover:opacity-[0.12]">
@@ -23,10 +32,8 @@ export function LocationCard({
 
       <div className="relative">
         <div className="flex items-center justify-between">
-          <Badge variant={founding ? "clay" : isOpen ? "sage" : "amber"}>
-            {founding ? "Founding Location" : isOpen ? "Abierto" : "Próximamente"}
-          </Badge>
-          {isOpen && (
+          <Badge variant={badgeVariant}>{badgeLabel}</Badge>
+          {(isOpen || isPresale) && (
             <ArrowUpRight className="h-5 w-5 text-paper/40 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:text-paper" />
           )}
         </div>

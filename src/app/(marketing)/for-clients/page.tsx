@@ -22,7 +22,7 @@ const FAQ = [
   },
   {
     q: "¿Cómo reservo una sesión?",
-    a: "Entra al perfil del profesional, elige servicio y horario disponible, y confirma. Si el profesional tiene pagos online activos, pagas al reservar y recibes confirmación inmediata.",
+    a: "Estamos en preventa: La Ceiba aún no abre. Cuando abramos, entrarás al perfil del profesional, elegirás servicio y horario disponible, y confirmarás. Si el profesional tiene pagos online activos, pagarás al reservar y recibirás confirmación en línea.",
   },
   {
     q: "¿Puedo cancelar o reagendar?",
@@ -79,7 +79,7 @@ export default async function ForClientsPage() {
         <div className="container-page grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
           {[
             { icon: BadgeCheck, title: "Verificados", text: "Credenciales revisadas antes de publicar cada perfil." },
-            { icon: CalendarCheck, title: "Reserva online", text: "Elige horario, paga seguro y recibe confirmación al instante." },
+            { icon: CalendarCheck, title: "Reserva online", text: "Cuando abramos, eliges horario, pagas seguro y recibes confirmación en línea." },
             { icon: DoorClosed, title: "Privacidad real", text: "Salas privadas con aislamiento acústico. Nada de cubículos." },
             { icon: HeartHandshake, title: "Sin presión", text: "Precios y políticas visibles. Tú eliges con calma." },
           ].map((f) => (
