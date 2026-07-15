@@ -3,6 +3,7 @@ import { sendEmailSafe, emailTemplates } from "@/lib/email";
 import { formatMXN, formatCredits, formatDateTimeMX, generateAccessCode } from "@/lib/utils";
 import { audit } from "@/lib/audit";
 import { BLOCKING_STATUSES } from "@/lib/bookings/engine";
+import { grantLot } from "@/lib/credits/ledger";
 
 /**
  * Aplica los efectos de negocio de un pago PAID. IDEMPOTENTE:
@@ -72,24 +73,29 @@ export async function fulfillPayment(paymentId: string): Promise<{ fulfilled: bo
           });
         }
 
-        // Otorga créditos incluidos
+        // Otorga créditos incluidos como lote de membresía (vence al fin del periodo)
         if (plan.includedCredits > 0) {
           const wallet =
             profile.wallet ??
             (await tx.creditWallet.create({ data: { practitionerId: profile.id } }));
-          const updated = await tx.creditWallet.update({
-            where: { id: wallet.id },
-            data: { balance: { increment: plan.includedCredits } },
-          });
           const membership = await tx.practitionerMembership.findUnique({
             where: { practitionerId: profile.id },
+          });
+          const balanceAfter = await grantLot(tx, {
+            walletId: wallet.id,
+            source: "MEMBERSHIP_GRANT",
+            amount: plan.includedCredits,
+            now: new Date(),
+            expiresAt: periodEnd,
+            membershipId: membership?.id,
+            note: `Alta de membresía ${plan.name}${isFounder ? " (founder)" : ""}`,
           });
           await tx.creditTransaction.create({
             data: {
               walletId: wallet.id,
               type: "MEMBERSHIP_GRANT",
               amount: plan.includedCredits,
-              balanceAfter: updated.balance,
+              balanceAfter,
               membershipId: membership?.id,
               note: `Alta de membresía ${plan.name}${isFounder ? " (founder)" : ""}`,
               expiresAt: periodEnd,
@@ -124,7 +130,8 @@ export async function fulfillPayment(paymentId: string): Promise<{ fulfilled: bo
       });
       if (!pkg || !profile) break;
 
-      const expiresAt = new Date(Date.now() + pkg.validityDays * 24 * 3600_000);
+      const now = new Date();
+      const expiresAt = new Date(now.getTime() + pkg.validityDays * 24 * 3600_000);
 
       await db.$transaction(async (tx) => {
         const wallet =
@@ -139,16 +146,21 @@ export async function fulfillPayment(paymentId: string): Promise<{ fulfilled: bo
             expiresAt,
           },
         });
-        const updated = await tx.creditWallet.update({
-          where: { id: wallet.id },
-          data: { balance: { increment: pkg.hours } },
+        const balanceAfter = await grantLot(tx, {
+          walletId: wallet.id,
+          source: "PACKAGE_PURCHASE",
+          amount: pkg.hours,
+          now,
+          expiresAt,
+          purchaseId: purchase.id,
+          note: `Paquete ${pkg.name}`,
         });
         await tx.creditTransaction.create({
           data: {
             walletId: wallet.id,
             type: "PACKAGE_PURCHASE",
             amount: pkg.hours,
-            balanceAfter: updated.balance,
+            balanceAfter,
             purchaseId: purchase.id,
             note: `Paquete ${pkg.name}`,
             expiresAt,

@@ -4,6 +4,13 @@ import { db } from "@/lib/db";
 import { getSetting } from "@/lib/settings";
 import { generateAccessCode, generateBookingCode, MX_TZ } from "@/lib/utils";
 import { audit } from "@/lib/audit";
+import {
+  getAvailableCredits,
+  consumeCredits,
+  reintegrateToLots,
+  grantLot,
+  parseAllocations,
+} from "@/lib/credits/ledger";
 
 /**
  * Motor de reservas.
@@ -188,9 +195,11 @@ export async function createRoomBooking(
 
       if (params.payWith === "credits") {
         const wallet = practitioner.wallet;
-        if (!wallet || wallet.balance < creditsNeeded) {
+        const now = new Date();
+        const available = wallet ? await getAvailableCredits(tx, wallet.id, now) : 0;
+        if (!wallet || available + 1e-9 < creditsNeeded) {
           throw new BookingError(
-            `Necesitas ${creditsNeeded} créditos (tienes ${wallet?.balance ?? 0})`,
+            `Necesitas ${creditsNeeded} créditos (tienes ${available})`,
             "INSUFFICIENT_CREDITS"
           );
         }
@@ -212,17 +221,17 @@ export async function createRoomBooking(
           },
         });
 
-        const updatedWallet = await tx.creditWallet.update({
-          where: { id: wallet.id },
-          data: { balance: { decrement: creditsNeeded } },
-        });
+        // Consume FIFO por lotes y guarda la atribución para el reintegro.
+        const allocations = await consumeCredits(tx, wallet.id, creditsNeeded, now);
+        const balanceAfter = await getAvailableCredits(tx, wallet.id, now);
         await tx.creditTransaction.create({
           data: {
             walletId: wallet.id,
             type: "BOOKING_CONSUMPTION",
             amount: -creditsNeeded,
-            balanceAfter: updatedWallet.balance,
+            balanceAfter,
             bookingId: created.id,
+            lotAllocations: allocations as unknown as Prisma.InputJsonValue,
             note: `${room.name} · ${params.dateStr} ${params.startHour}:00`,
           },
         });
@@ -298,28 +307,51 @@ export async function cancelRoomBooking(params: {
         : booking.creditsUsed
       : 0;
 
+  const now = new Date();
   const updated = await db.$transaction(async (tx) => {
     const b = await tx.booking.update({
       where: { id: booking.id },
       data: {
         status: isLate ? "LATE_CANCELLED" : "CANCELLED",
-        cancelledAt: new Date(),
+        cancelledAt: now,
         cancellationReason: params.reason,
       },
     });
 
     const wallet = booking.practitioner?.wallet;
-    if (wallet && creditsToRefund > 0) {
-      const w = await tx.creditWallet.update({
-        where: { id: wallet.id },
-        data: { balance: { increment: creditsToRefund } },
+    if (wallet && creditsToRefund > 0 && booking.creditsUsed) {
+      // Reintegra al lote de origen según la atribución del consumo. Fracción =
+      // proporción reembolsada (1 si es dentro de la ventana). Si el consumo no
+      // trae atribución (reserva previa al ledger de lotes), se crea un lote de
+      // reintegro sin vencimiento para no dejar corto al practitioner.
+      const consumption = await tx.creditTransaction.findFirst({
+        where: { bookingId: booking.id, type: "BOOKING_CONSUMPTION" },
+        orderBy: { createdAt: "desc" },
       });
+      const allocations = parseAllocations(consumption?.lotAllocations);
+      const fraction = creditsToRefund / booking.creditsUsed;
+
+      let restored = 0;
+      if (allocations.length > 0) {
+        restored = await reintegrateToLots(tx, wallet.id, allocations, fraction, now);
+      }
+      if (restored + 1e-9 < creditsToRefund) {
+        // Faltante (lotes de origen vencidos o reserva legacy): lote nuevo.
+        await grantLot(tx, {
+          walletId: wallet.id,
+          source: "REFUND",
+          amount: creditsToRefund - restored,
+          now,
+          note: "Reintegro por cancelación",
+        });
+      }
+      const balanceAfter = await getAvailableCredits(tx, wallet.id, now);
       await tx.creditTransaction.create({
         data: {
           walletId: wallet.id,
           type: "REFUND",
           amount: creditsToRefund,
-          balanceAfter: w.balance,
+          balanceAfter,
           bookingId: booking.id,
           note: isLate
             ? `Cancelación tardía: reembolso parcial (${100 - penaltyPct}%)`

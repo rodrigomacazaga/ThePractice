@@ -1,6 +1,11 @@
 import { db } from "@/lib/db";
-import { computeLotRemainders, protectedPackageCredits } from "@/lib/credits/lots";
 import { getSetting } from "@/lib/settings";
+import {
+  getAvailableCredits,
+  reintegrateToLots,
+  grantLot,
+  parseAllocations,
+} from "@/lib/credits/ledger";
 
 /**
  * Jobs recurrentes en serverless: no hay proceso persistente, así que
@@ -66,50 +71,32 @@ export async function releaseUnpaidBookings(): Promise<JobResult> {
   return { job: "release-unpaid-bookings", processed };
 }
 
-/** Expira lotes de créditos vencidos y ajusta wallets. */
+/**
+ * Expira lotes vencidos: vacía su `remaining` (que ES el remanente real, sin
+ * heurística) y registra la baja. Idempotente por construcción: un lote ya
+ * vaciado tiene remaining 0 y no vuelve a entrar.
+ */
 export async function expireCredits(): Promise<JobResult> {
   const now = new Date();
-  const expirable = await db.creditTransaction.findMany({
-    where: {
-      expiresAt: { lt: now },
-      amount: { gt: 0 },
-      type: { in: ["PACKAGE_PURCHASE", "MEMBERSHIP_GRANT"] },
-    },
-    include: { wallet: true },
+  const expired = await db.creditLot.findMany({
+    where: { expiresAt: { lt: now }, remaining: { gt: 0 } },
   });
 
   let processed = 0;
-  for (const txn of expirable) {
-    // ¿Ya se registró la expiración de este lote?
-    const already = await db.creditTransaction.findFirst({
-      where: { type: "EXPIRATION", note: `expira:${txn.id}` },
-    });
-    if (already) continue;
-
-    // Expira solo el remanente REAL del lote (lo no consumido según la
-    // reconstrucción FIFO), nunca el monto original: los consumos posteriores
-    // ya gastaron parte de este lote y el resto del balance puede pertenecer
-    // a lotes más nuevos (p. ej. paquetes pagados).
-    const history = await db.creditTransaction.findMany({
-      where: { walletId: txn.walletId },
-      select: { id: true, type: true, amount: true, createdAt: true, expiresAt: true, note: true },
-    });
-    const remaining = computeLotRemainders(history).get(txn.id) ?? 0;
-    const toExpire = Math.min(remaining, Math.max(txn.wallet.balance, 0));
-    if (toExpire <= 0) continue;
-
+  for (const lot of expired) {
     await db.$transaction(async (tx) => {
-      const wallet = await tx.creditWallet.update({
-        where: { id: txn.walletId },
-        data: { balance: { decrement: toExpire } },
-      });
+      const fresh = await tx.creditLot.findUnique({ where: { id: lot.id } });
+      if (!fresh || fresh.remaining <= 0) return;
+      await tx.creditLot.update({ where: { id: lot.id }, data: { remaining: 0 } });
+      const balance = await getAvailableCredits(tx, lot.walletId, now);
+      await tx.creditWallet.update({ where: { id: lot.walletId }, data: { balance } });
       await tx.creditTransaction.create({
         data: {
-          walletId: txn.walletId,
+          walletId: lot.walletId,
           type: "EXPIRATION",
-          amount: -toExpire,
-          balanceAfter: wallet.balance,
-          note: `expira:${txn.id}`,
+          amount: -fresh.remaining,
+          balanceAfter: balance,
+          note: `Vencimiento de lote (${lot.source})`,
         },
       });
     });
@@ -173,6 +160,7 @@ export async function markNoShows(): Promise<JobResult> {
     const refund = creditsUsed * (1 - penaltyPct / 100);
     const penalized = creditsUsed - refund;
 
+    const now = new Date();
     await db.$transaction(async (tx) => {
       // Solo transiciona si sigue CONFIRMED (evita doble efecto por concurrencia).
       const updated = await tx.booking.updateMany({
@@ -183,11 +171,27 @@ export async function markNoShows(): Promise<JobResult> {
 
       let balanceAfter = wallet.balance;
       if (refund > 0) {
-        const w = await tx.creditWallet.update({
-          where: { id: wallet.id },
-          data: { balance: { increment: refund } },
+        // Reintegra al lote de origen (fracción no penalizada); fallback a lote nuevo.
+        const consumption = await tx.creditTransaction.findFirst({
+          where: { bookingId: booking.id, type: "BOOKING_CONSUMPTION" },
+          orderBy: { createdAt: "desc" },
         });
-        balanceAfter = w.balance;
+        const allocations = parseAllocations(consumption?.lotAllocations);
+        const fraction = 1 - penaltyPct / 100;
+        let restored = 0;
+        if (allocations.length > 0) {
+          restored = await reintegrateToLots(tx, wallet.id, allocations, fraction, now);
+        }
+        if (restored + 1e-9 < refund) {
+          await grantLot(tx, {
+            walletId: wallet.id,
+            source: "REFUND",
+            amount: refund - restored,
+            now,
+            note: "Reintegro por no-show",
+          });
+        }
+        balanceAfter = await getAvailableCredits(tx, wallet.id, now);
         await tx.creditTransaction.create({
           data: {
             walletId: wallet.id,
@@ -242,29 +246,48 @@ export async function renewMemberships(): Promise<JobResult> {
       });
 
       const wallet = m.practitioner.wallet;
-      if (wallet && m.plan.includedCredits > 0) {
-        // Rollover limitado SOLO sobre créditos de membresía: los créditos
-        // de paquetes comprados (dinero pagado, con su propia vigencia)
-        // quedan protegidos del recorte.
-        const history = await tx.creditTransaction.findMany({
-          where: { walletId: wallet.id },
-          select: { id: true, type: true, amount: true, createdAt: true, expiresAt: true, note: true },
+      if (wallet && (m.plan.includedCredits > 0 || m.plan.rolloverLimit > 0)) {
+        // Rollover SOLO sobre lotes de esta membresía: los paquetes comprados
+        // (dinero pagado, con su propia vigencia) quedan intactos. Los lotes
+        // del periodo que termina se cierran; hasta rolloverLimit se arrastra
+        // al nuevo lote y el excedente se expira.
+        const oldLots = await tx.creditLot.findMany({
+          where: {
+            walletId: wallet.id,
+            source: "MEMBERSHIP_GRANT",
+            membershipId: m.id,
+            remaining: { gt: 0 },
+          },
         });
-        const shielded = Math.min(protectedPackageCredits(history, now), Math.max(wallet.balance, 0));
-        const membershipRemainder = Math.max(wallet.balance - shielded, 0);
-        const rolled = shielded + Math.min(membershipRemainder, m.plan.rolloverLimit);
-        const newBalance = rolled + m.plan.includedCredits;
-        await tx.creditWallet.update({
-          where: { id: wallet.id },
-          data: { balance: newBalance },
+        const totalRemaining = oldLots.reduce((s, l) => s + l.remaining, 0);
+        const carried = Math.min(totalRemaining, m.plan.rolloverLimit);
+        const discarded = totalRemaining - carried;
+
+        if (oldLots.length > 0) {
+          await tx.creditLot.updateMany({
+            where: { id: { in: oldLots.map((l) => l.id) } },
+            data: { remaining: 0 },
+          });
+        }
+
+        const grantAmount = m.plan.includedCredits + carried;
+        const balanceAfter = await grantLot(tx, {
+          walletId: wallet.id,
+          source: "MEMBERSHIP_GRANT",
+          amount: grantAmount,
+          now,
+          expiresAt: nextEnd,
+          membershipId: m.id,
+          note: `Renovación ${m.plan.name}${carried > 0 ? ` (incluye ${carried} de rollover)` : ""}`,
         });
-        if (wallet.balance > rolled) {
+
+        if (discarded > 1e-9) {
           await tx.creditTransaction.create({
             data: {
               walletId: wallet.id,
               type: "EXPIRATION",
-              amount: -(wallet.balance - rolled),
-              balanceAfter: rolled,
+              amount: -discarded,
+              balanceAfter,
               note: "Créditos no usados fuera del límite de rollover",
             },
           });
@@ -274,7 +297,7 @@ export async function renewMemberships(): Promise<JobResult> {
             walletId: wallet.id,
             type: "MEMBERSHIP_GRANT",
             amount: m.plan.includedCredits,
-            balanceAfter: newBalance,
+            balanceAfter,
             membershipId: m.id,
             note: `Renovación ${m.plan.name}`,
             expiresAt: nextEnd,

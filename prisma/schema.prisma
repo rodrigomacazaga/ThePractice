@@ -397,10 +397,42 @@ model CreditWallet {
   id             String              @id @default(cuid())
   practitionerId String              @unique
   practitioner   PractitionerProfile @relation(fields: [practitionerId], references: [id], onDelete: Cascade)
+  // Caché denormalizado = suma de `remaining` de los lotes NO vencidos.
+  // La fuente de verdad son los CreditLot; el ledger mantiene esto sincronizado.
   balance        Float               @default(0)
   updatedAt      DateTime            @updatedAt
 
   transactions CreditTransaction[]
+  lots         CreditLot[]
+}
+
+enum CreditLotSource {
+  MEMBERSHIP_GRANT
+  PACKAGE_PURCHASE
+  ADMIN_ADJUSTMENT
+  REFUND
+}
+
+/**
+ * Lote de créditos: la unidad contable real. Cada abono (membresía, paquete,
+ * ajuste, reintegro) crea un lote con su propio vencimiento; el consumo es FIFO
+ * (primero el que expira antes). Esto permite expirar y hacer rollover de forma
+ * exacta, sin la heurística sobre la bolsa única que teníamos antes.
+ */
+model CreditLot {
+  id            String          @id @default(cuid())
+  walletId      String
+  wallet        CreditWallet    @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  source        CreditLotSource
+  grantedAmount Float // monto original del lote
+  remaining     Float // lo que queda por consumir
+  expiresAt     DateTime? // null = sin vencimiento
+  createdAt     DateTime        @default(now())
+  membershipId  String? // trazabilidad al origen (si aplica)
+  purchaseId    String?
+  note          String?
+
+  @@index([walletId, expiresAt])
 }
 
 enum CreditTxnType {
@@ -430,6 +462,9 @@ model CreditTransaction {
   membership   PractitionerMembership? @relation(fields: [membershipId], references: [id])
   note         String?
   expiresAt    DateTime? // para lotes de créditos con vencimiento
+  // Atribución de consumo a lotes: [{ lotId, amount }]. Permite reintegrar al
+  // lote de origen al cancelar/no-show sin recalcular nada.
+  lotAllocations Json?
   createdAt    DateTime      @default(now())
 
   @@index([walletId, createdAt])

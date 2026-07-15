@@ -719,21 +719,34 @@ async function main() {
               currentPeriodEnd: periodEnd,
             },
           });
-          const updated = await db.creditWallet.update({
-            where: { id: wallet.id },
-            data: { balance: { increment: plan.includedCredits } },
-          });
-          await db.creditTransaction.create({
-            data: {
-              walletId: wallet.id,
-              type: "MEMBERSHIP_GRANT",
-              amount: plan.includedCredits,
-              balanceAfter: updated.balance,
-              membershipId: membership.id,
-              note: `Alta de membresía ${plan.name} (founder)`,
-              expiresAt: periodEnd,
-            },
-          });
+          if (plan.includedCredits > 0) {
+            await db.creditLot.create({
+              data: {
+                walletId: wallet.id,
+                source: "MEMBERSHIP_GRANT",
+                grantedAmount: plan.includedCredits,
+                remaining: plan.includedCredits,
+                expiresAt: periodEnd,
+                membershipId: membership.id,
+                note: `Alta de membresía ${plan.name} (founder)`,
+              },
+            });
+            const updated = await db.creditWallet.update({
+              where: { id: wallet.id },
+              data: { balance: plan.includedCredits },
+            });
+            await db.creditTransaction.create({
+              data: {
+                walletId: wallet.id,
+                type: "MEMBERSHIP_GRANT",
+                amount: plan.includedCredits,
+                balanceAfter: updated.balance,
+                membershipId: membership.id,
+                note: `Alta de membresía ${plan.name} (founder)`,
+                expiresAt: periodEnd,
+              },
+            });
+          }
         }
       }
     }

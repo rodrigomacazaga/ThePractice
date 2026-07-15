@@ -8,6 +8,7 @@ import { audit } from "@/lib/audit";
 import { slugify } from "@/lib/utils";
 import { sendEmailSafe, emailTemplates } from "@/lib/email";
 import { setSetting, clearSetting, type SettingKey } from "@/lib/settings";
+import { grantLot, consumeCredits, getAvailableCredits } from "@/lib/credits/ledger";
 import { cancelRoomBooking, createAdminBlock, BookingError } from "@/lib/bookings/engine";
 import { runJob, type JobName, ALL_JOBS } from "@/lib/jobs";
 
@@ -311,20 +312,39 @@ export async function adjustCredits(formData: FormData) {
     update: {},
   });
 
-  await db.$transaction(async (tx) => {
-    const updated = await tx.creditWallet.update({
-      where: { id: wallet.id },
-      data: { balance: { increment: parsed.data.amount } },
-    });
-    await tx.creditTransaction.create({
-      data: {
+  const now = new Date();
+  const amount = parsed.data.amount;
+  const result = await db.$transaction(async (tx) => {
+    if (amount > 0) {
+      // Ajuste positivo: lote sin vencimiento.
+      const balanceAfter = await grantLot(tx, {
         walletId: wallet.id,
-        type: "ADMIN_ADJUSTMENT",
-        amount: parsed.data.amount,
-        balanceAfter: updated.balance,
+        source: "ADMIN_ADJUSTMENT",
+        amount,
+        now,
         note: parsed.data.note,
-      },
-    });
+      });
+      return { balanceAfter, error: null as string | null };
+    }
+    // Ajuste negativo: consume FIFO; falla si no hay saldo suficiente.
+    const available = await getAvailableCredits(tx, wallet.id, now);
+    if (available + 1e-9 < -amount) {
+      return { balanceAfter: available, error: "Saldo insuficiente para el ajuste negativo" };
+    }
+    await consumeCredits(tx, wallet.id, -amount, now);
+    const balanceAfter = await getAvailableCredits(tx, wallet.id, now);
+    return { balanceAfter, error: null as string | null };
+  });
+  if (result.error) return { error: result.error };
+
+  await db.creditTransaction.create({
+    data: {
+      walletId: wallet.id,
+      type: "ADMIN_ADJUSTMENT",
+      amount,
+      balanceAfter: result.balanceAfter,
+      note: parsed.data.note,
+    },
   });
 
   await audit({
