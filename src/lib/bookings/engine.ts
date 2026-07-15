@@ -114,7 +114,12 @@ export async function createRoomBooking(
     where: { id: params.roomId },
     include: { roomType: true, location: true },
   });
-  if (!room || !room.active) throw new BookingError("Sala no encontrada", "NOT_FOUND");
+  if (!room || !room.active || !room.roomType.active) {
+    throw new BookingError("Sala no encontrada", "NOT_FOUND");
+  }
+  if (room.location.status !== "OPEN") {
+    throw new BookingError("Esta sede no está disponible para reservas", "FORBIDDEN");
+  }
 
   const { location, roomType } = room;
   if (
@@ -153,11 +158,14 @@ export async function createRoomBooking(
 
   const creditsNeeded = roomType.creditsPerHour * params.hours;
   const hasMembership = practitioner.membership?.status === "ACTIVE";
-  const hourlyPrice =
-    room.hourlyPriceCentsOverride ??
-    (hasMembership && roomType.memberHourlyPriceCents != null
-      ? roomType.memberHourlyPriceCents
-      : roomType.baseHourlyPriceCents);
+  // El override de sala reemplaza al precio base, no a la tarifa de miembro:
+  // un miembro paga su tarifa de miembro si existe, y solo cae al override
+  // (o al base) cuando el roomType no define tarifa de miembro.
+  const hourlyPrice = hasMembership
+    ? (roomType.memberHourlyPriceCents ??
+      room.hourlyPriceCentsOverride ??
+      roomType.baseHourlyPriceCents)
+    : (room.hourlyPriceCentsOverride ?? roomType.baseHourlyPriceCents);
   const amountCents = hourlyPrice * params.hours;
 
   const booking = await db.$transaction(

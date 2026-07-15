@@ -33,6 +33,7 @@ export function BookingClient({
   openingHour,
   closingHour,
   pastCutoffHour,
+  cancellationWindowHours,
   walletBalance,
   isApproved,
 }: {
@@ -44,6 +45,7 @@ export function BookingClient({
   openingHour: number;
   closingHour: number;
   pastCutoffHour: number;
+  cancellationWindowHours: number;
   walletBalance: number;
   isApproved: boolean;
 }) {
@@ -345,7 +347,7 @@ export function BookingClient({
 
       <div className="flex flex-wrap gap-2">
         <Badge variant="outline" size="md">
-          Cancelación gratuita hasta 24 h antes
+          Cancelación gratuita hasta {cancellationWindowHours} h antes
         </Badge>
         <Badge variant="outline" size="md">
           Código de acceso al confirmar

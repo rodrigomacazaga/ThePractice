@@ -7,13 +7,16 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { ActionButton, ActionForm } from "@/components/dashboard/action-form";
-import { Field, Input } from "@/components/ui/form";
+import { Field, Input, Textarea } from "@/components/ui/form";
+import { Modal } from "@/components/ui/modal";
 import {
   approvePractitioner,
   rejectPractitioner,
   toggleFeatured,
   reviewDocument,
   adjustCredits,
+  updatePractitionerProfile,
+  toggleUserActive,
 } from "../actions";
 
 export const dynamic = "force-dynamic";
@@ -63,6 +66,7 @@ export default async function AdminPractitionersPage() {
             const approve = approvePractitioner.bind(null, p.id);
             const reject = rejectPractitioner.bind(null, p.id);
             const feature = toggleFeatured.bind(null, p.id);
+            const toggleActive = toggleUserActive.bind(null, p.user.id);
 
             return (
               <div
@@ -79,6 +83,7 @@ export default async function AdminPractitionersPage() {
                       {p.membership?.status === "ACTIVE" && (
                         <Badge variant="ink">{p.membership.plan.name}</Badge>
                       )}
+                      {!p.user.active && <Badge variant="rust">Cuenta inactiva</Badge>}
                     </div>
                     <p className="mt-0.5 text-xs text-stone-deep">
                       {p.user.email} · /p/{p.slug} · {p.specialties.join(", ") || "sin especialidad"} ·
@@ -103,6 +108,49 @@ export default async function AdminPractitionersPage() {
                       action={feature}
                       label={p.featured ? "Quitar destacado" : "Destacar"}
                       variant="ghost"
+                    />
+                    <Modal trigger="Editar" title={`Editar ${p.user.name}`}>
+                      <ActionForm action={updatePractitionerProfile} submitLabel="Guardar cambios">
+                        <input type="hidden" name="practitionerId" value={p.id} />
+                        <div className="grid gap-3 sm:grid-cols-2">
+                          <Field label="Nombre" htmlFor={`ed-name-${p.id}`}>
+                            <Input id={`ed-name-${p.id}`} name="name" required defaultValue={p.user.name} />
+                          </Field>
+                          <Field label="Teléfono" htmlFor={`ed-phone-${p.id}`}>
+                            <Input id={`ed-phone-${p.id}`} name="phone" defaultValue={p.user.phone ?? ""} />
+                          </Field>
+                        </div>
+                        <div className="mt-3">
+                          <Field label="Headline (público)" htmlFor={`ed-head-${p.id}`}>
+                            <Input
+                              id={`ed-head-${p.id}`}
+                              name="headline"
+                              placeholder="Psicóloga clínica · Ansiedad y burnout"
+                              defaultValue={p.headline ?? ""}
+                            />
+                          </Field>
+                        </div>
+                        <div className="mt-3">
+                          <Field label="Especialidades (separadas por coma)" htmlFor={`ed-spec-${p.id}`}>
+                            <Textarea
+                              id={`ed-spec-${p.id}`}
+                              name="specialties"
+                              rows={2}
+                              defaultValue={p.specialties.join(", ")}
+                            />
+                          </Field>
+                        </div>
+                      </ActionForm>
+                    </Modal>
+                    <ActionButton
+                      action={toggleActive}
+                      label={p.user.active ? "Desactivar cuenta" : "Reactivar"}
+                      variant={p.user.active ? "danger" : "outline"}
+                      confirmText={
+                        p.user.active
+                          ? `¿Desactivar la cuenta de ${p.user.name}? No podrá iniciar sesión hasta reactivarla.`
+                          : undefined
+                      }
                     />
                   </div>
                 </div>

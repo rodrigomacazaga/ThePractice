@@ -7,6 +7,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Field, Input, Select } from "@/components/ui/form";
+import { Tabs } from "@/components/ui/tabs";
 import { ActionButton, ActionForm } from "@/components/dashboard/action-form";
 import { adminCancelBooking, createBlockAction } from "../actions";
 
@@ -24,21 +25,20 @@ const STATUS_VARIANT: Record<string, "sage" | "amber" | "rust" | "default" | "in
 export default async function AdminBookingsPage() {
   await requireAdmin();
 
-  const [upcoming, rooms] = await Promise.all([
+  const [locations, upcoming] = await Promise.all([
+    db.location.findMany({
+      orderBy: { sort: "asc" },
+      include: { rooms: { where: { active: true }, orderBy: { name: "asc" } } },
+    }),
     db.booking.findMany({
       where: { endsAt: { gte: new Date() } },
       orderBy: { startsAt: "asc" },
-      take: 60,
+      take: 200,
       include: {
         room: true,
         location: true,
         practitioner: { include: { user: { select: { name: true } } } },
       },
-    }),
-    db.room.findMany({
-      where: { active: true },
-      include: { location: true },
-      orderBy: [{ location: { sort: "asc" } }, { name: "asc" }],
     }),
   ]);
 
@@ -46,116 +46,156 @@ export default async function AdminBookingsPage() {
     <>
       <PageHeader
         title="Reservas"
-        description="Todas las reservas próximas y bloqueos administrativos."
+        description="Reservas próximas y bloqueos administrativos por establecimiento."
       />
 
-      <div className="grid gap-8 xl:grid-cols-[1.3fr_0.7fr]">
-        <div>
-          {upcoming.length === 0 ? (
-            <EmptyState
-              icon={CalendarDays}
-              title="Sin reservas próximas"
-              description="Las reservas de practitioners y los bloqueos aparecen aquí."
-            />
-          ) : (
-            <div className="space-y-3">
-              {upcoming.map((b) => {
-                const cancel = adminCancelBooking.bind(null, b.id);
-                const cancellable = ["CONFIRMED", "PENDING_PAYMENT", "ADMIN_BLOCKED"].includes(
-                  b.status
-                );
-                return (
-                  <div
-                    key={b.id}
-                    className="flex flex-wrap items-center gap-4 rounded-2xl border border-line bg-surface p-5 shadow-(--shadow-card)"
-                  >
-                    <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <p className="font-display text-sm font-bold">
-                          {b.room?.name ?? "—"} ·{" "}
-                          {b.kind === "ADMIN_BLOCK"
-                            ? (b.notes ?? "Bloqueo")
-                            : (b.practitioner?.user.name ?? "—")}
-                        </p>
-                        <Badge variant={STATUS_VARIANT[b.status] ?? "default"}>{b.status}</Badge>
-                      </div>
-                      <p className="mt-1 text-xs text-stone-deep">
-                        {formatDateTimeMX(b.startsAt, b.location.timezone)} · {b.location.shortName} ·{" "}
-                        <span className="font-mono">{b.code}</span>
-                        {b.creditsUsed != null && ` · ${formatCredits(b.creditsUsed)} cr`}
-                        {b.priceCents != null && ` · ${formatMXN(b.priceCents)}`}
-                      </p>
-                    </div>
-                    {cancellable && (
-                      <ActionButton
-                        action={cancel}
-                        label="Cancelar"
-                        variant="outline"
-                        confirmText="¿Cancelar esta reserva? El practitioner recibe reembolso completo de créditos."
-                      />
-                    )}
+      <Tabs
+        tabs={locations.map((loc) => ({
+          id: loc.id,
+          label: `${loc.shortName} · ${upcoming.filter((b) => b.locationId === loc.id).length}`,
+        }))}
+        panels={locations.map((loc) => {
+          const bookings = upcoming.filter((b) => b.locationId === loc.id);
+          const hourRange = Array.from(
+            { length: Math.max(loc.closingHour - loc.openingHour, 1) },
+            (_, i) => i + loc.openingHour
+          );
+          return (
+            <div key={loc.id} className="grid gap-8 xl:grid-cols-[1.3fr_0.7fr]">
+              <div>
+                {bookings.length === 0 ? (
+                  <EmptyState
+                    icon={CalendarDays}
+                    title="Sin reservas próximas"
+                    description="Las reservas de practitioners y los bloqueos de esta sede aparecen aquí."
+                  />
+                ) : (
+                  <div className="space-y-3">
+                    {bookings.map((b) => {
+                      const cancel = adminCancelBooking.bind(null, b.id);
+                      const cancellable = [
+                        "CONFIRMED",
+                        "PENDING_PAYMENT",
+                        "ADMIN_BLOCKED",
+                      ].includes(b.status);
+                      return (
+                        <div
+                          key={b.id}
+                          className="flex flex-wrap items-center gap-4 rounded-2xl border border-line bg-surface p-5 shadow-(--shadow-card)"
+                        >
+                          <div className="min-w-0 flex-1">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <p className="font-display text-sm font-bold">
+                                {b.room?.name ?? "—"} ·{" "}
+                                {b.kind === "ADMIN_BLOCK"
+                                  ? (b.notes ?? "Bloqueo")
+                                  : (b.practitioner?.user.name ?? "—")}
+                              </p>
+                              <Badge variant={STATUS_VARIANT[b.status] ?? "default"}>
+                                {b.status}
+                              </Badge>
+                            </div>
+                            <p className="mt-1 text-xs text-stone-deep">
+                              {formatDateTimeMX(b.startsAt, b.location.timezone)} ·{" "}
+                              <span className="font-mono">{b.code}</span>
+                              {b.creditsUsed != null &&
+                                ` · ${formatCredits(b.creditsUsed)} cr`}
+                              {b.priceCents != null && ` · ${formatMXN(b.priceCents)}`}
+                            </p>
+                          </div>
+                          {cancellable && (
+                            <ActionButton
+                              action={cancel}
+                              label="Cancelar"
+                              variant="outline"
+                              confirmText="¿Cancelar esta reserva? El practitioner recibe reembolso completo de créditos."
+                            />
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-
-        {/* CREAR BLOQUEO */}
-        <Card className="h-fit">
-          <CardHeader>
-            <CardTitle>Bloquear horario</CardTitle>
-            <CardDescription>
-              Mantenimiento, eventos o salas fuera de servicio.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ActionForm action={createBlockAction} submitLabel="Crear bloqueo">
-              <div className="space-y-4">
-                <Field label="Sala" htmlFor="blk-room">
-                  <Select id="blk-room" name="roomId" required defaultValue="">
-                    <option value="" disabled>
-                      Selecciona sala
-                    </option>
-                    {rooms.map((room) => (
-                      <option key={room.id} value={room.id}>
-                        {room.location.shortName} · {room.name}
-                      </option>
-                    ))}
-                  </Select>
-                </Field>
-                <Field label="Fecha" htmlFor="blk-date">
-                  <Input id="blk-date" name="date" type="date" required />
-                </Field>
-                <div className="grid grid-cols-2 gap-3">
-                  <Field label="Desde" htmlFor="blk-start">
-                    <Select id="blk-start" name="startHour" defaultValue="7">
-                      {Array.from({ length: 15 }, (_, i) => i + 7).map((h) => (
-                        <option key={h} value={h}>
-                          {hourLabel(h)}
-                        </option>
-                      ))}
-                    </Select>
-                  </Field>
-                  <Field label="Horas" htmlFor="blk-hours">
-                    <Input
-                      id="blk-hours"
-                      name="hours"
-                      type="number"
-                      min={1}
-                      max={15}
-                      defaultValue={1}
-                    />
-                  </Field>
-                </div>
-                <Field label="Motivo" htmlFor="blk-reason">
-                  <Input id="blk-reason" name="reason" placeholder="Mantenimiento" />
-                </Field>
+                )}
               </div>
-            </ActionForm>
-          </CardContent>
-        </Card>
-      </div>
+
+              {/* CREAR BLOQUEO — horario real de la sede */}
+              <Card className="h-fit">
+                <CardHeader>
+                  <CardTitle>Bloquear horario</CardTitle>
+                  <CardDescription>
+                    Mantenimiento, eventos o salas fuera de servicio en {loc.shortName} (
+                    {loc.openingHour}:00–{loc.closingHour}:00).
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {loc.rooms.length === 0 ? (
+                    <p className="text-sm text-stone">
+                      Esta sede aún no tiene salas activas.
+                    </p>
+                  ) : (
+                    <ActionForm action={createBlockAction} submitLabel="Crear bloqueo">
+                      <div className="space-y-4">
+                        <Field label="Sala" htmlFor={`blk-room-${loc.id}`}>
+                          <Select
+                            id={`blk-room-${loc.id}`}
+                            name="roomId"
+                            required
+                            defaultValue=""
+                          >
+                            <option value="" disabled>
+                              Selecciona sala
+                            </option>
+                            {loc.rooms.map((room) => (
+                              <option key={room.id} value={room.id}>
+                                {room.name}
+                              </option>
+                            ))}
+                          </Select>
+                        </Field>
+                        <Field label="Fecha" htmlFor={`blk-date-${loc.id}`}>
+                          <Input id={`blk-date-${loc.id}`} name="date" type="date" required />
+                        </Field>
+                        <div className="grid grid-cols-2 gap-3">
+                          <Field label="Desde" htmlFor={`blk-start-${loc.id}`}>
+                            <Select
+                              id={`blk-start-${loc.id}`}
+                              name="startHour"
+                              defaultValue={String(loc.openingHour)}
+                            >
+                              {hourRange.map((h) => (
+                                <option key={h} value={h}>
+                                  {hourLabel(h)}
+                                </option>
+                              ))}
+                            </Select>
+                          </Field>
+                          <Field label="Horas" htmlFor={`blk-hours-${loc.id}`}>
+                            <Input
+                              id={`blk-hours-${loc.id}`}
+                              name="hours"
+                              type="number"
+                              min={1}
+                              max={loc.closingHour - loc.openingHour}
+                              defaultValue={1}
+                            />
+                          </Field>
+                        </div>
+                        <Field label="Motivo" htmlFor={`blk-reason-${loc.id}`}>
+                          <Input
+                            id={`blk-reason-${loc.id}`}
+                            name="reason"
+                            placeholder="Mantenimiento"
+                          />
+                        </Field>
+                      </div>
+                    </ActionForm>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          );
+        })}
+      />
     </>
   );
 }

@@ -21,11 +21,18 @@ export async function GET(req: NextRequest) {
   const location = await db.location.findUnique({
     where: { id: locationId },
     include: {
-      rooms: { where: { active: true }, include: { roomType: true }, orderBy: { name: "asc" } },
+      rooms: {
+        where: { active: true, roomType: { active: true } },
+        include: { roomType: true },
+        orderBy: { name: "asc" },
+      },
     },
   });
   if (!location) {
     return NextResponse.json({ error: "Ubicación no encontrada" }, { status: 404 });
+  }
+  if (location.status !== "OPEN") {
+    return NextResponse.json({ error: "Esta sede no está disponible" }, { status: 403 });
   }
 
   const grid = await getDayGrid({
@@ -44,9 +51,14 @@ export async function GET(req: NextRequest) {
       name: room.name,
       roomType: room.roomType.name,
       creditsPerHour: room.roomType.creditsPerHour,
+      // Precedencia alineada con el engine: el override de sala reemplaza al
+      // precio base, no a la tarifa de miembro.
       baseHourlyPriceCents:
         room.hourlyPriceCentsOverride ?? room.roomType.baseHourlyPriceCents,
-      memberHourlyPriceCents: room.roomType.memberHourlyPriceCents,
+      memberHourlyPriceCents:
+        room.roomType.memberHourlyPriceCents ??
+        room.hourlyPriceCentsOverride ??
+        room.roomType.baseHourlyPriceCents,
       takenHours: grid.find((g) => g.roomId === room.id)?.takenHours ?? [],
     })),
   });

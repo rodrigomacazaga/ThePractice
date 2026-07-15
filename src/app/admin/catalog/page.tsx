@@ -1,5 +1,5 @@
 import { Plus } from "lucide-react";
-import type { MembershipPlan, RoomType } from "@prisma/client";
+import type { AddOn, HourPackage, MembershipPlan, RoomType } from "@prisma/client";
 import { requireAdmin } from "@/lib/auth-helpers";
 import { db } from "@/lib/db";
 import { formatCredits, formatMXN } from "@/lib/utils";
@@ -15,7 +15,14 @@ import {
   updateRoomTypePricing,
   upsertPlan,
   upsertRoomType,
+  upsertHourPackage,
+  upsertAddOn,
 } from "../actions";
+
+const ADDON_BILLINGS = [
+  ["MONTHLY", "Mensual"],
+  ["ONE_TIME", "Único"],
+] as const;
 
 const MICROSITE_TIERS = ["BASIC", "PRO", "PREMIUM", "FEATURED"] as const;
 
@@ -182,6 +189,130 @@ function RoomTypeAttributeFields({ rt, uid: uidProp }: { rt?: RoomType; uid?: st
             className="h-4 w-4 accent-clay"
           />
           Activo (visible y reservable)
+        </label>
+      </div>
+    </>
+  );
+}
+
+/**
+ * Campos de un paquete de horas. Sin locationId (llega en una fase posterior):
+ * la estructura queda lista para extenderse con un selector de ubicación.
+ */
+function HourPackageFields({ pkg, uid: uidProp }: { pkg?: HourPackage; uid?: string }) {
+  const uid = uidProp ?? pkg?.id ?? "new";
+  return (
+    <>
+      {pkg && <input type="hidden" name="packageId" value={pkg.id} />}
+      {!pkg && (
+        <div className="mb-3">
+          <Field label="Código (fijo tras crear)" htmlFor={`pk-code-${uid}`} hint="minúsculas y guiones, ej. pack-10">
+            <Input id={`pk-code-${uid}`} name="code" required placeholder="pack-10" />
+          </Field>
+        </div>
+      )}
+      <div className="grid gap-3 sm:grid-cols-2">
+        <Field label="Nombre" htmlFor={`pk-name-${uid}`}>
+          <Input id={`pk-name-${uid}`} name="name" required placeholder="10 horas" defaultValue={pkg?.name} />
+        </Field>
+        <Field label="Horas" htmlFor={`pk-hours-${uid}`}>
+          <Input
+            id={`pk-hours-${uid}`}
+            name="hours"
+            type="number"
+            min={0.5}
+            step="0.5"
+            required
+            defaultValue={pkg?.hours}
+          />
+        </Field>
+      </div>
+      <div className="mt-3 grid grid-cols-3 gap-3">
+        <Field label="Precio (MXN)" htmlFor={`pk-price-${uid}`}>
+          <Input
+            id={`pk-price-${uid}`}
+            name="price"
+            type="number"
+            min={0}
+            required
+            defaultValue={pkg ? pkg.priceCents / 100 : undefined}
+          />
+        </Field>
+        <Field label="Vigencia (días)" htmlFor={`pk-val-${uid}`}>
+          <Input
+            id={`pk-val-${uid}`}
+            name="validityDays"
+            type="number"
+            min={1}
+            max={365}
+            required
+            defaultValue={pkg?.validityDays ?? 90}
+          />
+        </Field>
+        <Field label="Orden" htmlFor={`pk-sort-${uid}`}>
+          <Input id={`pk-sort-${uid}`} name="sort" type="number" min={0} defaultValue={pkg?.sort ?? 0} />
+        </Field>
+      </div>
+      <label className="mt-4 flex items-center gap-2 text-sm font-medium">
+        <input type="checkbox" name="active" defaultChecked={pkg?.active ?? true} className="h-4 w-4 accent-clay" />
+        Activo (a la venta)
+      </label>
+    </>
+  );
+}
+
+/**
+ * Campos de un add-on. Sin locationId (llega en una fase posterior): la
+ * estructura queda lista para extenderse con un selector de ubicación.
+ */
+function AddOnFields({ addon, uid: uidProp }: { addon?: AddOn; uid?: string }) {
+  const uid = uidProp ?? addon?.id ?? "new";
+  return (
+    <>
+      {addon && <input type="hidden" name="addOnId" value={addon.id} />}
+      {!addon && (
+        <div className="mb-3">
+          <Field label="Código (fijo tras crear)" htmlFor={`ad-code-${uid}`} hint="minúsculas y guiones, ej. locker">
+            <Input id={`ad-code-${uid}`} name="code" required placeholder="locker" />
+          </Field>
+        </div>
+      )}
+      <div className="grid gap-3 sm:grid-cols-2">
+        <Field label="Nombre" htmlFor={`ad-name-${uid}`}>
+          <Input id={`ad-name-${uid}`} name="name" required placeholder="Locker mensual" defaultValue={addon?.name} />
+        </Field>
+        <Field label="Facturación" htmlFor={`ad-bill-${uid}`}>
+          <Select id={`ad-bill-${uid}`} name="billing" defaultValue={addon?.billing ?? "MONTHLY"}>
+            {ADDON_BILLINGS.map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </Select>
+        </Field>
+      </div>
+      <div className="mt-3">
+        <Field label="Descripción" htmlFor={`ad-desc-${uid}`}>
+          <Textarea id={`ad-desc-${uid}`} name="description" rows={2} defaultValue={addon?.description ?? ""} />
+        </Field>
+      </div>
+      <div className="mt-3 flex items-end gap-4">
+        <Field label="Precio (MXN)" htmlFor={`ad-price-${uid}`} className="max-w-40">
+          <Input
+            id={`ad-price-${uid}`}
+            name="price"
+            type="number"
+            min={0}
+            required
+            defaultValue={addon ? addon.priceCents / 100 : undefined}
+          />
+        </Field>
+        <Field label="Orden" htmlFor={`ad-sort-${uid}`} className="max-w-24">
+          <Input id={`ad-sort-${uid}`} name="sort" type="number" min={0} defaultValue={addon?.sort ?? 0} />
+        </Field>
+        <label className="flex items-center gap-2 pb-2.5 text-sm font-medium">
+          <input type="checkbox" name="active" defaultChecked={addon?.active ?? true} className="h-4 w-4 accent-clay" />
+          Activo
         </label>
       </div>
     </>
@@ -455,25 +586,44 @@ export default async function AdminCatalogPage() {
         </section>
       ))}
 
-      {/* PAQUETES Y ADD-ONS (lectura) */}
+      {/* PAQUETES Y ADD-ONS */}
       <div className="mt-12 grid gap-8 md:grid-cols-2">
         <Card>
           <CardHeader>
             <CardTitle>Paquetes de horas</CardTitle>
-            <CardDescription>Edición completa en la siguiente iteración.</CardDescription>
+            <CardDescription>Bolsas de horas prepagadas con vigencia.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-2">
             {packages.map((pkg) => (
               <div
                 key={pkg.id}
-                className="flex items-center justify-between rounded-xl bg-paper px-4 py-3 text-sm"
+                className="flex items-center justify-between gap-3 rounded-xl bg-paper px-4 py-3 text-sm"
               >
-                <span className="font-display font-semibold">{pkg.name}</span>
-                <span className="text-stone-deep">
-                  {formatMXN(pkg.priceCents)} · {pkg.validityDays} días
+                <span className="flex items-center gap-2 font-display font-semibold">
+                  {pkg.name}
+                  {!pkg.active && (
+                    <Badge variant="default">Inactivo</Badge>
+                  )}
+                </span>
+                <span className="flex items-center gap-3">
+                  <span className="text-stone-deep">
+                    {formatMXN(pkg.priceCents)} · {formatCredits(pkg.hours)} h · {pkg.validityDays} días
+                  </span>
+                  <Modal trigger="Editar" title={`Editar ${pkg.name}`}>
+                    <ActionForm action={upsertHourPackage} submitLabel="Guardar cambios">
+                      <HourPackageFields pkg={pkg} />
+                    </ActionForm>
+                  </Modal>
                 </span>
               </div>
             ))}
+            <div className="border-t border-line pt-3">
+              <Modal trigger="Nuevo paquete" title="Nuevo paquete de horas">
+                <ActionForm action={upsertHourPackage} submitLabel="Crear paquete">
+                  <HourPackageFields uid="new-pkg" />
+                </ActionForm>
+              </Modal>
+            </div>
           </CardContent>
         </Card>
         <Card>
@@ -485,15 +635,34 @@ export default async function AdminCatalogPage() {
             {addOns.map((addon) => (
               <div
                 key={addon.id}
-                className="flex items-center justify-between rounded-xl bg-paper px-4 py-3 text-sm"
+                className="flex items-center justify-between gap-3 rounded-xl bg-paper px-4 py-3 text-sm"
               >
-                <span className="font-display font-semibold">{addon.name}</span>
-                <span className="text-stone-deep">
-                  {formatMXN(addon.priceCents)}
-                  {addon.billing === "MONTHLY" ? "/mes" : " único"}
+                <span className="flex items-center gap-2 font-display font-semibold">
+                  {addon.name}
+                  {!addon.active && (
+                    <Badge variant="default">Inactivo</Badge>
+                  )}
+                </span>
+                <span className="flex items-center gap-3">
+                  <span className="text-stone-deep">
+                    {formatMXN(addon.priceCents)}
+                    {addon.billing === "MONTHLY" ? "/mes" : " único"}
+                  </span>
+                  <Modal trigger="Editar" title={`Editar ${addon.name}`}>
+                    <ActionForm action={upsertAddOn} submitLabel="Guardar cambios">
+                      <AddOnFields addon={addon} />
+                    </ActionForm>
+                  </Modal>
                 </span>
               </div>
             ))}
+            <div className="border-t border-line pt-3">
+              <Modal trigger="Nuevo add-on" title="Nuevo add-on">
+                <ActionForm action={upsertAddOn} submitLabel="Crear add-on">
+                  <AddOnFields uid="new-addon" />
+                </ActionForm>
+              </Modal>
+            </div>
           </CardContent>
         </Card>
       </div>

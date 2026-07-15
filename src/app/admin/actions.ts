@@ -7,7 +7,7 @@ import { db } from "@/lib/db";
 import { audit } from "@/lib/audit";
 import { slugify } from "@/lib/utils";
 import { sendEmailSafe, emailTemplates } from "@/lib/email";
-import { setSetting, type SettingKey } from "@/lib/settings";
+import { setSetting, clearSetting, type SettingKey } from "@/lib/settings";
 import { cancelRoomBooking, createAdminBlock, BookingError } from "@/lib/bookings/engine";
 import { runJob, type JobName, ALL_JOBS } from "@/lib/jobs";
 
@@ -265,6 +265,19 @@ export async function createBlockAction(formData: FormData) {
   });
   if (!parsed.success) return { error: "Datos inválidos" };
 
+  // El bloqueo administrativo debe caber en el horario de operación de la
+  // sede (createAdminBlock no lo valida). Cargamos la sala con su ubicación.
+  const room = await db.room.findUnique({
+    where: { id: parsed.data.roomId },
+    include: { location: true },
+  });
+  if (!room) return { error: "Sala no encontrada" };
+  const { openingHour, closingHour } = room.location;
+  if (parsed.data.startHour < openingHour || parsed.data.startHour + parsed.data.hours > closingHour)
+    return {
+      error: `Horario fuera de operación (${openingHour}:00–${closingHour}:00)`,
+    };
+
   try {
     const { date, ...rest } = parsed.data;
     await createAdminBlock({ ...rest, dateStr: date, createdById: session.user.id });
@@ -325,27 +338,57 @@ export async function adjustCredits(formData: FormData) {
   return { ok: true };
 }
 
+const BOOKING_SETTING_KEYS: SettingKey[] = [
+  "booking.cancellation_window_hours",
+  "booking.late_cancel_penalty_pct",
+  "booking.no_show_penalty_pct",
+  "booking.min_advance_minutes",
+  "booking.max_days_ahead",
+  "booking.pending_payment_hold_minutes",
+  "founder.deposit_cents",
+];
+
+/**
+ * Guarda reglas operativas. Con `locationId` crea/actualiza el override de esa
+ * ubicación; sin él, edita el valor global (heredado por las sedes sin
+ * override). Un campo vacío se ignora (no borra el override — para eso está
+ * removeSettingOverride).
+ */
 export async function updateBookingSettings(formData: FormData) {
   const session = await requireAdmin();
-  const keys: SettingKey[] = [
-    "booking.cancellation_window_hours",
-    "booking.late_cancel_penalty_pct",
-    "booking.no_show_penalty_pct",
-    "booking.min_advance_minutes",
-    "booking.max_days_ahead",
-  ];
-  for (const key of keys) {
+  const rawLocation = formData.get("locationId");
+  const locationId = rawLocation ? String(rawLocation) : undefined;
+
+  for (const key of BOOKING_SETTING_KEYS) {
     const raw = formData.get(key);
     if (raw == null || String(raw).trim() === "") continue;
     const value = Number(raw);
     if (!Number.isFinite(value) || value < 0) return { error: `Valor inválido para ${key}` };
-    await setSetting(key, value);
+    await setSetting(key, value, locationId);
   }
   await audit({
     actorId: session.user.id,
     action: "settings.updated",
     entity: "Setting",
-    data: { keys },
+    data: { locationId: locationId ?? "global" },
+  });
+  revalidatePath("/admin/settings");
+  return { ok: true };
+}
+
+/** Quita el override de una key en una ubicación: vuelve a heredar el global. */
+export async function removeSettingOverride(formData: FormData) {
+  const session = await requireAdmin();
+  const key = String(formData.get("key"));
+  const locationId = String(formData.get("locationId"));
+  if (!BOOKING_SETTING_KEYS.includes(key as SettingKey) || !locationId)
+    return { error: "Parámetros inválidos" };
+  await clearSetting(key, locationId);
+  await audit({
+    actorId: session.user.id,
+    action: "settings.override_removed",
+    entity: "Setting",
+    data: { key, locationId },
   });
   revalidatePath("/admin/settings");
   return { ok: true };
@@ -477,6 +520,136 @@ export async function deletePlan(planId: string) {
   revalidatePath("/la-ceiba");
   revalidatePath("/for-practitioners");
   revalidatePath("/the-practice");
+  return { ok: true };
+}
+
+// ------------------------------------------------------------
+// Paquetes de horas y add-ons
+// ------------------------------------------------------------
+
+const hourPackageSchema = z.object({
+  packageId: z.string().optional(),
+  code: z
+    .string()
+    .regex(/^[a-z0-9-]{2,24}$/, "minúsculas, números y guiones")
+    .optional(),
+  name: z.string().min(2).max(40),
+  hours: z.coerce.number().min(0.5).max(500),
+  price: z.coerce.number().min(0).max(1000000),
+  validityDays: z.coerce.number().int().min(1).max(365),
+  sort: z.coerce.number().int().min(0).max(999),
+});
+
+/**
+ * Alta y edición de paquetes de horas. El código es inmutable tras crear
+ * (referencia de compras y cobros). Precio en MXN → centavos.
+ */
+export async function upsertHourPackage(formData: FormData) {
+  const session = await requireAdmin();
+  const parsed = hourPackageSchema.safeParse({
+    packageId: formData.get("packageId") || undefined,
+    code: formData.get("code") || undefined,
+    name: formData.get("name"),
+    hours: formData.get("hours"),
+    price: formData.get("price"),
+    validityDays: formData.get("validityDays"),
+    sort: formData.get("sort"),
+  });
+  if (!parsed.success) return { error: "Datos inválidos" };
+
+  const { packageId, code, price, ...data } = parsed.data;
+  const active = formData.get("active") === "on";
+  const common = {
+    name: data.name,
+    hours: data.hours,
+    validityDays: data.validityDays,
+    sort: data.sort,
+    priceCents: Math.round(price * 100),
+    active,
+  };
+
+  let id = packageId;
+  if (packageId) {
+    await db.hourPackage.update({ where: { id: packageId }, data: common });
+  } else {
+    if (!code) return { error: "El código es obligatorio (ej. \"pack-10\")" };
+    if (await db.hourPackage.findUnique({ where: { code } }))
+      return { error: `Ya existe un paquete con el código "${code}"` };
+    const created = await db.hourPackage.create({ data: { ...common, code } });
+    id = created.id;
+  }
+  await audit({
+    actorId: session.user.id,
+    action: packageId ? "package.updated" : "package.created",
+    entity: "HourPackage",
+    entityId: id,
+    data: { name: data.name },
+  });
+  revalidatePath("/admin/catalog");
+  revalidatePath("/memberships");
+  return { ok: true };
+}
+
+const addOnSchema = z.object({
+  addOnId: z.string().optional(),
+  code: z
+    .string()
+    .regex(/^[a-z0-9-]{2,24}$/, "minúsculas, números y guiones")
+    .optional(),
+  name: z.string().min(2).max(60),
+  description: z.string().max(500).optional(),
+  price: z.coerce.number().min(0).max(1000000),
+  billing: z.enum(["ONE_TIME", "MONTHLY"]),
+  sort: z.coerce.number().int().min(0).max(999),
+});
+
+/**
+ * Alta y edición de add-ons (lockers, equipo, visibilidad). El código es
+ * inmutable tras crear. Precio en MXN → centavos.
+ */
+export async function upsertAddOn(formData: FormData) {
+  const session = await requireAdmin();
+  const parsed = addOnSchema.safeParse({
+    addOnId: formData.get("addOnId") || undefined,
+    code: formData.get("code") || undefined,
+    name: formData.get("name"),
+    description: formData.get("description") || undefined,
+    price: formData.get("price"),
+    billing: formData.get("billing"),
+    sort: formData.get("sort"),
+  });
+  if (!parsed.success) return { error: "Datos inválidos" };
+
+  const { addOnId, code, price, ...data } = parsed.data;
+  const active = formData.get("active") === "on";
+  const common = {
+    name: data.name,
+    description: data.description ?? null,
+    billing: data.billing,
+    sort: data.sort,
+    priceCents: Math.round(price * 100),
+    active,
+  };
+
+  let id = addOnId;
+  if (addOnId) {
+    await db.addOn.update({ where: { id: addOnId }, data: common });
+  } else {
+    if (!code) return { error: "El código es obligatorio (ej. \"locker\")" };
+    if (await db.addOn.findUnique({ where: { code } }))
+      return { error: `Ya existe un add-on con el código "${code}"` };
+    const created = await db.addOn.create({ data: { ...common, code } });
+    id = created.id;
+  }
+  await audit({
+    actorId: session.user.id,
+    action: addOnId ? "addon.updated" : "addon.created",
+    entity: "AddOn",
+    entityId: id,
+    data: { name: data.name },
+  });
+  revalidatePath("/admin/catalog");
+  revalidatePath("/memberships");
   return { ok: true };
 }
 
@@ -682,16 +855,22 @@ export async function upsertRoom(formData: FormData) {
   const hourlyPriceCentsOverride = priceOverride != null ? Math.round(priceOverride * 100) : null;
   const size = { widthMeters: widthMeters ?? null, lengthMeters: lengthMeters ?? null };
 
-  const [location, roomType] = await Promise.all([
-    db.location.findUnique({ where: { id: data.locationId } }),
-    db.roomType.findUnique({ where: { id: data.roomTypeId } }),
-  ]);
-  if (!location || !roomType) return { error: "Ubicación o tipo de sala inválidos" };
-  if (roomType.locationId !== location.id)
-    return { error: `El tipo "${roomType.name}" pertenece a otra ubicación` };
+  const roomType = await db.roomType.findUnique({ where: { id: data.roomTypeId } });
+  if (!roomType) return { error: "Tipo de sala inválido" };
 
   let id = roomId;
+  let locationShortName: string;
   if (roomId) {
+    // Al editar, la ubicación es la REAL de la sala (nunca la del form: una
+    // sala física no cambia de edificio). El tipo debe pertenecer a ella.
+    const room = await db.room.findUnique({
+      where: { id: roomId },
+      include: { location: true },
+    });
+    if (!room) return { error: "Sala no encontrada" };
+    if (roomType.locationId !== room.locationId)
+      return { error: `El tipo "${roomType.name}" pertenece a otra ubicación` };
+    locationShortName = room.location.shortName;
     await db.room.update({
       where: { id: roomId },
       data: {
@@ -704,6 +883,11 @@ export async function upsertRoom(formData: FormData) {
       },
     });
   } else {
+    const location = await db.location.findUnique({ where: { id: data.locationId } });
+    if (!location) return { error: "Ubicación inválida" };
+    if (roomType.locationId !== location.id)
+      return { error: `El tipo "${roomType.name}" pertenece a otra ubicación` };
+    locationShortName = location.shortName;
     const slug = slugify(data.name);
     const dup = await db.room.findUnique({
       where: { locationId_slug: { locationId: data.locationId, slug } },
@@ -726,11 +910,92 @@ export async function upsertRoom(formData: FormData) {
     action: roomId ? "room.updated" : "room.created",
     entity: "Room",
     entityId: id,
-    data: { name: data.name, location: location.shortName, type: roomType.code },
+    data: { name: data.name, location: locationShortName, type: roomType.code },
   });
   revalidatePath("/admin/rooms");
   revalidatePath("/rooms");
   revalidatePath("/la-ceiba");
+  return { ok: true };
+}
+
+// ------------------------------------------------------------
+// Cuentas: practitioners y clientes
+// ------------------------------------------------------------
+
+const practitionerProfileSchema = z.object({
+  practitionerId: z.string().min(1),
+  name: z.string().min(2).max(80),
+  headline: z.string().max(120).optional(),
+  phone: z.string().max(30).optional(),
+  specialties: z.string().max(300).optional(),
+});
+
+/**
+ * Edición administrativa del perfil de un practitioner: nombre y teléfono
+ * viven en User; headline y especialidades en PractitionerProfile.
+ */
+export async function updatePractitionerProfile(formData: FormData) {
+  const session = await requireAdmin();
+  const parsed = practitionerProfileSchema.safeParse({
+    practitionerId: formData.get("practitionerId"),
+    name: formData.get("name"),
+    headline: formData.get("headline") || undefined,
+    phone: formData.get("phone") || undefined,
+    specialties: formData.get("specialties") || undefined,
+  });
+  if (!parsed.success) return { error: "Datos inválidos" };
+
+  const profile = await db.practitionerProfile.findUnique({
+    where: { id: parsed.data.practitionerId },
+  });
+  if (!profile) return { error: "Practitioner no encontrado" };
+
+  await db.$transaction([
+    db.user.update({
+      where: { id: profile.userId },
+      data: { name: parsed.data.name, phone: parsed.data.phone ?? null },
+    }),
+    db.practitionerProfile.update({
+      where: { id: parsed.data.practitionerId },
+      data: {
+        headline: parsed.data.headline ?? null,
+        specialties: parseList(parsed.data.specialties ?? null),
+      },
+    }),
+  ]);
+  await audit({
+    actorId: session.user.id,
+    action: "practitioner.profile_updated",
+    entity: "PractitionerProfile",
+    entityId: parsed.data.practitionerId,
+    data: { name: parsed.data.name },
+  });
+  revalidatePath("/admin/practitioners");
+  revalidatePath("/directory");
+  return { ok: true };
+}
+
+/**
+ * Activa/desactiva una cuenta de usuario. Una cuenta inactiva no puede
+ * iniciar sesión (auth.ts exige User.active), así que esto corta el acceso.
+ */
+export async function toggleUserActive(userId: string) {
+  const session = await requireAdmin();
+  const user = await db.user.findUnique({ where: { id: userId } });
+  if (!user) return { error: "Usuario no encontrado" };
+  if (user.id === session.user.id) return { error: "No puedes desactivar tu propia cuenta" };
+
+  await db.user.update({ where: { id: userId }, data: { active: !user.active } });
+  await audit({
+    actorId: session.user.id,
+    action: user.active ? "user.deactivated" : "user.reactivated",
+    entity: "User",
+    entityId: userId,
+    data: { email: user.email },
+  });
+  revalidatePath("/admin/practitioners");
+  revalidatePath("/admin/clients");
+  revalidatePath("/directory");
   return { ok: true };
 }
 

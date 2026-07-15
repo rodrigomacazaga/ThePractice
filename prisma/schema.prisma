@@ -765,7 +765,9 @@ model Locker {
   number            String
   size              LockerSize   @default(SMALL)
   status            LockerStatus @default(AVAILABLE)
-  monthlyPriceCents Int
+  // Nullable desde 2026-07: el locker va incluido sin costo en toda
+  // membresía; el precio aplica solo si se renta suelto.
+  monthlyPriceCents Int?
   assignedToId      String?
   assignedTo        PractitionerProfile? @relation(fields: [assignedToId], references: [id])
   assignedAt        DateTime?
@@ -832,6 +834,10 @@ model Setting {
   value      Json
   updatedAt  DateTime @updatedAt
 
+  // El @@unique compuesto no cubre los globales (en Postgres NULL != NULL, así
+  // que permitiría filas key+NULL duplicadas). El unicidad de globales la
+  // garantiza el índice parcial `setting_key_global ON (key) WHERE locationId
+  // IS NULL`, creado por migración manual (no expresable en el schema de Prisma).
   @@unique([key, locationId])
 }
 

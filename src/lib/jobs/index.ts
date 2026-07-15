@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { computeLotRemainders, protectedPackageCredits } from "@/lib/credits/lots";
+import { getSetting } from "@/lib/settings";
 
 /**
  * Jobs recurrentes en serverless: no hay proceso persistente, así que
@@ -24,14 +25,45 @@ export interface JobResult {
   detail?: string;
 }
 
-/** Reservas PENDING_PAYMENT con más de 30 min se liberan. */
+/**
+ * Reservas PENDING_PAYMENT vencidas se liberan. El umbral es configurable vía
+ * `booking.pending_payment_hold_minutes` (setting global). Además de cancelar la
+ * reserva marcamos su Payment PENDING vinculado como FAILED: así cerramos la
+ * carrera con fulfillPayment (fulfill.ts) — si el pago llega después, no habrá un
+ * PENDING que fulfill pueda transicionar a PAID sobre un slot ya liberado.
+ */
 export async function releaseUnpaidBookings(): Promise<JobResult> {
-  const cutoff = new Date(Date.now() - 30 * 60 * 1000);
-  const result = await db.booking.updateMany({
+  const holdMinutes = await getSetting("booking.pending_payment_hold_minutes");
+  const cutoff = new Date(Date.now() - holdMinutes * 60 * 1000);
+
+  const expired = await db.booking.findMany({
     where: { status: "PENDING_PAYMENT", createdAt: { lt: cutoff } },
-    data: { status: "CANCELLED", cancellationReason: "Pago no completado (auto)" },
+    select: { id: true, paymentId: true },
   });
-  return { job: "release-unpaid-bookings", processed: result.count };
+
+  let processed = 0;
+  for (const booking of expired) {
+    await db.$transaction(async (tx) => {
+      // Cancela solo si sigue PENDING_PAYMENT (evita pisar un CONFIRMED que
+      // fulfillPayment pudo haber ganado justo antes de este job).
+      const cancelled = await tx.booking.updateMany({
+        where: { id: booking.id, status: "PENDING_PAYMENT" },
+        data: { status: "CANCELLED", cancellationReason: "Pago no completado (auto)" },
+      });
+      if (cancelled.count === 0) return;
+
+      // Marca el Payment vinculado como FAILED solo si sigue PENDING: si ya está
+      // PAID lo dejamos intacto para que fulfill.ts resuelva el reembolso.
+      if (booking.paymentId) {
+        await tx.payment.updateMany({
+          where: { id: booking.paymentId, status: "PENDING" },
+          data: { status: "FAILED" },
+        });
+      }
+      processed++;
+    });
+  }
+  return { job: "release-unpaid-bookings", processed };
 }
 
 /** Expira lotes de créditos vencidos y ajusta wallets. */
@@ -86,19 +118,104 @@ export async function expireCredits(): Promise<JobResult> {
   return { job: "expire-credits", processed };
 }
 
-/** Reservas CONFIRMED cuyo horario terminó sin check-in → NO_SHOW. */
+/**
+ * Reservas CONFIRMED cuyo horario terminó sin check-in → NO_SHOW.
+ *
+ * Reservas pagadas con créditos: aplica `booking.no_show_penalty_pct` — reembolsa
+ * al wallet la fracción no penalizada (CreditTransaction REFUND) y registra la
+ * parte penalizada (CreditTransaction NO_SHOW_PENALTY). Sigue el patrón del
+ * late_cancel_penalty en engine.ts (cancelRoomBooking). Reservas pagadas con
+ * dinero (creditsUsed nulo/0): solo se marcan NO_SHOW, sin efecto en créditos.
+ */
 export async function markNoShows(): Promise<JobResult> {
   const cutoff = new Date(Date.now() - 15 * 60 * 1000);
-  const result = await db.booking.updateMany({
+  const pending = await db.booking.findMany({
     where: {
       status: "CONFIRMED",
       kind: "ROOM_RENTAL",
       endsAt: { lt: cutoff },
       checkedInAt: null,
     },
-    data: { status: "NO_SHOW" },
+    include: { practitioner: { include: { wallet: true } } },
   });
-  return { job: "mark-no-shows", processed: result.count };
+
+  let processed = 0;
+  for (const booking of pending) {
+    const creditsUsed = booking.creditsUsed ?? 0;
+    const wallet = booking.practitioner?.wallet;
+
+    // Sin créditos consumidos (pagó con dinero) → solo marcar NO_SHOW.
+    if (creditsUsed <= 0 || !wallet) {
+      await db.booking.updateMany({
+        where: { id: booking.id, status: "CONFIRMED" },
+        data: { status: "NO_SHOW" },
+      });
+      processed++;
+      continue;
+    }
+
+    // Dedupe para reruns del job: si ya existe la penalización de este booking,
+    // el efecto de créditos ya se aplicó; solo aseguramos el estado NO_SHOW.
+    const alreadyPenalized = await db.creditTransaction.findFirst({
+      where: { bookingId: booking.id, type: "NO_SHOW_PENALTY" },
+      select: { id: true },
+    });
+    if (alreadyPenalized) {
+      await db.booking.updateMany({
+        where: { id: booking.id, status: "CONFIRMED" },
+        data: { status: "NO_SHOW" },
+      });
+      processed++;
+      continue;
+    }
+
+    const penaltyPct = await getSetting("booking.no_show_penalty_pct", booking.locationId);
+    const refund = creditsUsed * (1 - penaltyPct / 100);
+    const penalized = creditsUsed - refund;
+
+    await db.$transaction(async (tx) => {
+      // Solo transiciona si sigue CONFIRMED (evita doble efecto por concurrencia).
+      const updated = await tx.booking.updateMany({
+        where: { id: booking.id, status: "CONFIRMED" },
+        data: { status: "NO_SHOW" },
+      });
+      if (updated.count === 0) return;
+
+      let balanceAfter = wallet.balance;
+      if (refund > 0) {
+        const w = await tx.creditWallet.update({
+          where: { id: wallet.id },
+          data: { balance: { increment: refund } },
+        });
+        balanceAfter = w.balance;
+        await tx.creditTransaction.create({
+          data: {
+            walletId: wallet.id,
+            type: "REFUND",
+            amount: refund,
+            balanceAfter,
+            bookingId: booking.id,
+            note: `No-show: reembolso parcial (${100 - penaltyPct}%)`,
+          },
+        });
+      }
+
+      // Registra la parte penalizada (no altera balance: ya estaba descontada
+      // al consumir los créditos en la reserva).
+      await tx.creditTransaction.create({
+        data: {
+          walletId: wallet.id,
+          type: "NO_SHOW_PENALTY",
+          amount: -penalized,
+          balanceAfter,
+          bookingId: booking.id,
+          note: `No-show: penalización ${penaltyPct}%`,
+        },
+      });
+    });
+    processed++;
+  }
+  return { job: "mark-no-shows", processed };
 }
 
 /**

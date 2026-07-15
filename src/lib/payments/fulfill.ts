@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { sendEmailSafe, emailTemplates } from "@/lib/email";
 import { formatMXN, formatCredits, formatDateTimeMX, generateAccessCode } from "@/lib/utils";
 import { audit } from "@/lib/audit";
+import { BLOCKING_STATUSES } from "@/lib/bookings/engine";
 
 /**
  * Aplica los efectos de negocio de un pago PAID. IDEMPOTENTE:
@@ -24,6 +25,9 @@ export async function fulfillPayment(paymentId: string): Promise<{ fulfilled: bo
 
   const meta = (payment.metadata ?? {}) as Record<string, string>;
   const firstName = payment.user.name.split(" ")[0] ?? payment.user.name;
+  // Camino en que el pago llegó pero no hay reserva utilizable (la liberó el job
+  // y el slot ya se ocupó): se marca para reembolso y se omite el email de éxito.
+  let needsRefund = false;
 
   switch (payment.kind) {
     case "MEMBERSHIP": {
@@ -173,25 +177,63 @@ export async function fulfillPayment(paymentId: string): Promise<{ fulfilled: bo
         where: { id: bookingId },
         include: { room: true, location: true },
       });
-      if (!booking || booking.status !== "PENDING_PAYMENT") break;
+      if (!booking) break;
 
-      const updated = await db.booking.update({
-        where: { id: bookingId },
+      if (booking.status === "PENDING_PAYMENT") {
+        const updated = await db.booking.update({
+          where: { id: bookingId },
+          data: {
+            status: "CONFIRMED",
+            paymentId: payment.id,
+            accessCode: generateAccessCode(),
+          },
+        });
+
+        await sendEmailSafe({
+          to: payment.user.email,
+          ...emailTemplates.bookingConfirmed(
+            firstName,
+            booking.room?.name ?? "Sala",
+            formatDateTimeMX(booking.startsAt, booking.location.timezone),
+            updated.accessCode ?? ""
+          ),
+        });
+        break;
+      }
+
+      // El job releaseUnpaidBookings liberó la reserva antes de que llegara el
+      // pago (típicamente CANCELLED). Intentamos re-confirmarla si el slot sigue
+      // libre; si ya está ocupado, marcamos el pago para reembolso.
+      const reconfirmed = await tryReconfirmReleasedBooking(booking.id, payment.id);
+      if (reconfirmed) {
+        const fresh = await db.booking.findUnique({
+          where: { id: bookingId },
+          select: { accessCode: true },
+        });
+        await sendEmailSafe({
+          to: payment.user.email,
+          ...emailTemplates.bookingConfirmed(
+            firstName,
+            booking.room?.name ?? "Sala",
+            formatDateTimeMX(booking.startsAt, booking.location.timezone),
+            fresh?.accessCode ?? ""
+          ),
+        });
+        break;
+      }
+
+      // Slot ya no disponible: el pago quedó sin reserva → reembolso.
+      needsRefund = true;
+      await audit({
+        actorId: payment.userId,
+        action: "payment.needs_refund",
+        entity: "Payment",
+        entityId: payment.id,
         data: {
-          status: "CONFIRMED",
-          paymentId: payment.id,
-          accessCode: generateAccessCode(),
+          reason: "booking_released_and_slot_taken",
+          bookingId: booking.id,
+          amountCents: payment.amountCents,
         },
-      });
-
-      await sendEmailSafe({
-        to: payment.user.email,
-        ...emailTemplates.bookingConfirmed(
-          firstName,
-          booking.room?.name ?? "Sala",
-          formatDateTimeMX(booking.startsAt, booking.location.timezone),
-          updated.accessCode ?? ""
-        ),
       });
       break;
     }
@@ -200,14 +242,18 @@ export async function fulfillPayment(paymentId: string): Promise<{ fulfilled: bo
       break;
   }
 
-  await sendEmailSafe({
-    to: payment.user.email,
-    ...emailTemplates.paymentSucceeded(
-      firstName,
-      payment.description ?? "The Practice",
-      formatMXN(payment.amountCents)
-    ),
-  });
+  // En el camino "needs refund" (pago sin reserva utilizable) no enviamos el
+  // email genérico de pago exitoso: sería engañoso.
+  if (!needsRefund) {
+    await sendEmailSafe({
+      to: payment.user.email,
+      ...emailTemplates.paymentSucceeded(
+        firstName,
+        payment.description ?? "The Practice",
+        formatMXN(payment.amountCents)
+      ),
+    });
+  }
 
   await audit({
     actorId: payment.userId,
@@ -218,6 +264,66 @@ export async function fulfillPayment(paymentId: string): Promise<{ fulfilled: bo
   });
 
   return { fulfilled: true };
+}
+
+/**
+ * Reintenta confirmar una reserva que el job liberó justo antes de que llegara
+ * el pago. Toma el advisory lock por sala y verifica solapamiento igual que el
+ * motor de reservas (createRoomBooking): si el slot sigue libre re-confirma y
+ * enlaza el pago; si ya está ocupado devuelve false para que el caller gestione
+ * el reembolso. Idempotente: si la reserva ya volvió a CONFIRMED, no la duplica.
+ */
+async function tryReconfirmReleasedBooking(
+  bookingId: string,
+  paymentId: string
+): Promise<boolean> {
+  return db.$transaction(async (tx) => {
+    const booking = await tx.booking.findUnique({
+      where: { id: bookingId },
+      select: {
+        id: true,
+        roomId: true,
+        status: true,
+        startsAt: true,
+        endsAt: true,
+        accessCode: true,
+      },
+    });
+    if (!booking || !booking.roomId) return false;
+
+    // Ya reconfirmada por una llamada previa (webhook + redirect): éxito idempotente.
+    if (booking.status === "CONFIRMED") return true;
+    // Solo re-confirmamos reservas que el job liberó (CANCELLED). Estados como
+    // NO_SHOW/COMPLETED/ADMIN_BLOCKED no deben resucitarse por un pago tardío.
+    if (booking.status !== "CANCELLED") return false;
+
+    // Serializa contra createRoomBooking sobre la misma sala.
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${booking.roomId}))`;
+
+    const conflict = await tx.booking.findFirst({
+      where: {
+        roomId: booking.roomId,
+        id: { not: booking.id },
+        status: { in: BLOCKING_STATUSES },
+        startsAt: { lt: booking.endsAt },
+        endsAt: { gt: booking.startsAt },
+      },
+      select: { id: true },
+    });
+    if (conflict) return false;
+
+    await tx.booking.update({
+      where: { id: booking.id },
+      data: {
+        status: "CONFIRMED",
+        paymentId,
+        cancellationReason: null,
+        cancelledAt: null,
+        accessCode: booking.accessCode ?? generateAccessCode(),
+      },
+    });
+    return true;
+  });
 }
 
 /** Marca un pago como fallido (webhook o confirmación fallida). */

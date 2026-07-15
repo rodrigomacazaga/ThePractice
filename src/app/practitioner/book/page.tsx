@@ -5,6 +5,7 @@ import { es } from "date-fns/locale";
 import { requirePractitioner } from "@/lib/auth-helpers";
 import { db } from "@/lib/db";
 import { getDayGrid } from "@/lib/bookings/engine";
+import { getSetting } from "@/lib/settings";
 import { PageHeader } from "@/components/dashboard/shell";
 import { EmptyState } from "@/components/ui/empty-state";
 import { DoorClosed } from "lucide-react";
@@ -41,9 +42,16 @@ export default async function BookRoomPage({ searchParams }: Props) {
   const location =
     locations.find((l) => l.slug === sp.location) ?? locations[0]!;
 
-  // Días disponibles: hoy + 13 (en TZ de la ubicación)
+  // Settings de reserva por ubicación (con fallback global → default)
+  const [maxDaysAhead, minAdvanceMinutes, cancellationWindowHours] = await Promise.all([
+    getSetting("booking.max_days_ahead", location.id),
+    getSetting("booking.min_advance_minutes", location.id),
+    getSetting("booking.cancellation_window_hours", location.id),
+  ]);
+
+  // Días disponibles: hoy + (max_days_ahead - 1) (en TZ de la ubicación)
   const todayTz = new TZDate(new Date(), location.timezone);
-  const days: BookingDay[] = Array.from({ length: 14 }, (_, i) => {
+  const days: BookingDay[] = Array.from({ length: maxDaysAhead }, (_, i) => {
     const d = addDays(todayTz, i);
     return {
       dateStr: format(d, "yyyy-MM-dd"),
@@ -58,7 +66,7 @@ export default async function BookRoomPage({ searchParams }: Props) {
   }
 
   const rooms = await db.room.findMany({
-    where: { locationId: location.id, active: true },
+    where: { locationId: location.id, active: true, roomType: { active: true } },
     include: { roomType: true },
     orderBy: [{ roomType: { sort: "asc" } }, { name: "asc" }],
   });
@@ -78,17 +86,28 @@ export default async function BookRoomPage({ searchParams }: Props) {
     typeName: room.roomType.name,
     typeCode: room.roomType.code,
     creditsPerHour: room.roomType.creditsPerHour,
-    hourlyPriceCents:
-      room.hourlyPriceCentsOverride ??
-      (hasMembership && room.roomType.memberHourlyPriceCents != null
-        ? room.roomType.memberHourlyPriceCents
-        : room.roomType.baseHourlyPriceCents),
+    // Precio mostrado alineado con el cobro (engine.ts): el override de sala
+    // reemplaza al precio base, no a la tarifa de miembro.
+    hourlyPriceCents: hasMembership
+      ? (room.roomType.memberHourlyPriceCents ??
+        room.hourlyPriceCentsOverride ??
+        room.roomType.baseHourlyPriceCents)
+      : (room.hourlyPriceCentsOverride ?? room.roomType.baseHourlyPriceCents),
     takenHours: grid.find((g) => g.roomId === room.id)?.takenHours ?? [],
   }));
 
-  // Horas ya pasadas del día actual no se pueden reservar
-  const nowHourTz =
-    dateStr === days[0]!.dateStr ? new TZDate(new Date(), location.timezone).getHours() : -1;
+  // Cutoff del día actual: una hora de inicio solo es reservable si empieza
+  // al menos min_advance_minutes después de ahora (mismo criterio que el
+  // engine, que si no rechaza el POST con TOO_LATE). pastCutoffHour es la
+  // última hora NO reservable; isFree exige hour > pastCutoffHour.
+  let pastCutoffHour = -1;
+  if (dateStr === days[0]!.dateStr) {
+    const nowTz = new TZDate(new Date(), location.timezone);
+    const minStartMinutes = nowTz.getHours() * 60 + nowTz.getMinutes() + minAdvanceMinutes;
+    // Primera hora en punto que cumple la anticipación mínima.
+    const firstBookableHour = Math.ceil(minStartMinutes / 60);
+    pastCutoffHour = firstBookableHour - 1;
+  }
 
   return (
     <>
@@ -104,7 +123,8 @@ export default async function BookRoomPage({ searchParams }: Props) {
         rooms={bookingRooms}
         openingHour={location.openingHour}
         closingHour={location.closingHour}
-        pastCutoffHour={nowHourTz}
+        pastCutoffHour={pastCutoffHour}
+        cancellationWindowHours={cancellationWindowHours}
         walletBalance={profile.wallet?.balance ?? 0}
         isApproved={profile.verificationStatus === "APPROVED"}
       />
