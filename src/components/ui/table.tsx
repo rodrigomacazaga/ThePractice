@@ -21,9 +21,10 @@ export function TR({ className, ...props }: React.HTMLAttributes<HTMLTableRowEle
   return <tr className={cn("transition-colors hover:bg-paper/40", className)} {...props} />;
 }
 
-export function TH({ className, ...props }: React.ThHTMLAttributes<HTMLTableCellElement>) {
+export function TH({ scope = "col", className, ...props }: React.ThHTMLAttributes<HTMLTableCellElement>) {
   return (
     <th
+      scope={scope}
       className={cn(
         "px-4 py-3 text-left font-display text-[11px] font-semibold tracking-wider text-stone-deep uppercase",
         className

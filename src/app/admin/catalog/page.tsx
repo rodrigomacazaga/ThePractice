@@ -41,11 +41,16 @@ function PlanAttributeFields({ plan, uid: uidProp }: { plan?: MembershipPlan; ui
         </Field>
       </div>
       <div className="mt-3">
-        <Field label="Features (separadas por coma)" htmlFor={`pl-feat-${uid}`}>
+        <Field
+          label="Features"
+          htmlFor={`pl-feat-${uid}`}
+          hint="Sepáralas con comas: 22 horas de sala, Locker incluido, Soporte prioritario"
+        >
           <Textarea
             id={`pl-feat-${uid}`}
             name="features"
             rows={2}
+            placeholder="22 horas de sala, Locker incluido, Soporte prioritario"
             defaultValue={plan?.features.join(", ")}
           />
         </Field>
@@ -141,7 +146,11 @@ function RoomTypeAttributeFields({ rt, uid: uidProp }: { rt?: RoomType; uid?: st
         </Field>
       </div>
       <div className="mt-3 grid gap-3 sm:grid-cols-2">
-        <Field label="Ideal para (separado por coma)" htmlFor={`rt-ideal-${uid}`}>
+        <Field
+          label="Ideal para"
+          htmlFor={`rt-ideal-${uid}`}
+          hint="Sepáralas con comas: Psicología, Coaching"
+        >
           <Input
             id={`rt-ideal-${uid}`}
             name="idealFor"
@@ -149,7 +158,11 @@ function RoomTypeAttributeFields({ rt, uid: uidProp }: { rt?: RoomType; uid?: st
             defaultValue={rt?.idealFor.join(", ")}
           />
         </Field>
-        <Field label="Features (separadas por coma)" htmlFor={`rt-feat-${uid}`}>
+        <Field
+          label="Features"
+          htmlFor={`rt-feat-${uid}`}
+          hint="Sepáralas con comas: 2 sillones, Luz cálida"
+        >
           <Input
             id={`rt-feat-${uid}`}
             name="features"
@@ -338,17 +351,17 @@ export default async function AdminCatalogPage() {
               <CardTitle>
                 {plan.name}
                 {plan.highlighted && (
-                  <Badge variant="clay" className="ml-2">
+                  <Badge variant="clay" className="ms-2">
                     Popular
                   </Badge>
                 )}
                 {!plan.active && (
-                  <Badge variant="default" className="ml-2">
+                  <Badge variant="default" className="ms-2">
                     Inactivo
                   </Badge>
                 )}
               </CardTitle>
-              <span className="text-xs text-stone">
+              <span className="text-xs text-stone-deep">
                 {formatMXN(plan.monthlyPriceCents)}/mes ·{" "}
                 {formatCredits(plan.includedCredits)} h
               </span>
@@ -461,14 +474,14 @@ export default async function AdminCatalogPage() {
             <CardHeader className="flex-row items-center justify-between">
               <CardTitle>
                 {rt.name}
-                <span className="ml-2 font-mono text-xs font-normal text-stone">{rt.code}</span>
+                <span className="ml-2 font-mono text-xs font-normal text-stone-deep">{rt.code}</span>
                 {!rt.active && (
-                  <Badge variant="default" className="ml-2">
+                  <Badge variant="default" className="ms-2">
                     Inactivo
                   </Badge>
                 )}
               </CardTitle>
-              <span className="text-xs text-stone">
+              <span className="text-xs text-stone-deep">
                 {formatMXN(rt.baseHourlyPriceCents)}/h · {formatCredits(rt.creditsPerHour)} cr/h
               </span>
             </CardHeader>

@@ -11,7 +11,7 @@ export const buttonVariants = cva(
         primary:
           "bg-ink text-paper hover:bg-ink-soft active:scale-[0.98] shadow-[inset_0_1px_0_rgb(255_255_255/0.06)]",
         light:
-          "bg-paper text-ink hover:bg-white active:scale-[0.98]",
+          "bg-paper text-ink hover:bg-surface active:scale-[0.98]",
         clay: "bg-clay text-paper hover:bg-clay-deep active:scale-[0.98]",
         outline:
           "border border-line-strong bg-transparent text-ink hover:border-ink hover:bg-surface",

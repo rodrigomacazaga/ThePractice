@@ -14,6 +14,20 @@ import { runJob, type JobName, ALL_JOBS } from "@/lib/jobs";
 
 /** Server actions del panel admin. Toda acción sensible queda en AuditLog. */
 
+/**
+ * Mensaje de error accionable a partir de un ZodError: usa el mensaje custom
+ * del schema si lo hay (ya en español), o nombra el campo que falló. Evita el
+ * genérico "Datos inválidos" que no le dice al usuario qué corregir.
+ */
+function firstError(err: z.ZodError): string {
+  const issue = err.issues[0];
+  if (!issue) return "Datos inválidos";
+  const field = issue.path.join(".");
+  const generic = !issue.message || issue.message === "Required" || issue.message.startsWith("Invalid");
+  if (generic) return field ? `Revisa el campo "${field}"` : "Datos inválidos";
+  return field ? `${field}: ${issue.message}` : issue.message;
+}
+
 export async function approvePractitioner(practitionerId: string) {
   const session = await requireAdmin();
   const profile = await db.practitionerProfile.update({
@@ -152,7 +166,7 @@ export async function updatePlanPricing(formData: FormData) {
     founderPrice: formData.get("founderPrice") || undefined,
     includedCredits: formData.get("includedCredits"),
   });
-  if (!parsed.success) return { error: "Datos inválidos" };
+  if (!parsed.success) return { error: firstError(parsed.error) };
 
   await db.membershipPlan.update({
     where: { id: parsed.data.planId },
@@ -191,7 +205,7 @@ export async function updateRoomTypePricing(formData: FormData) {
     memberPrice: formData.get("memberPrice") || undefined,
     creditsPerHour: formData.get("creditsPerHour"),
   });
-  if (!parsed.success) return { error: "Datos inválidos" };
+  if (!parsed.success) return { error: firstError(parsed.error) };
 
   await db.roomType.update({
     where: { id: parsed.data.roomTypeId },
@@ -264,7 +278,7 @@ export async function createBlockAction(formData: FormData) {
     hours: formData.get("hours"),
     reason: formData.get("reason") || undefined,
   });
-  if (!parsed.success) return { error: "Datos inválidos" };
+  if (!parsed.success) return { error: firstError(parsed.error) };
 
   // El bloqueo administrativo debe caber en el horario de operación de la
   // sede (createAdminBlock no lo valida). Cargamos la sala con su ubicación.
@@ -454,7 +468,7 @@ export async function upsertPlan(formData: FormData) {
     micrositeTier: formData.get("micrositeTier"),
     sort: formData.get("sort"),
   });
-  if (!parsed.success) return { error: "Datos inválidos" };
+  if (!parsed.success) return { error: firstError(parsed.error) };
 
   const { planId, code, monthlyPrice, founderPrice, includedCredits, ...data } = parsed.data;
   const features = parseList(formData.get("features"));
@@ -572,7 +586,7 @@ export async function upsertHourPackage(formData: FormData) {
     validityDays: formData.get("validityDays"),
     sort: formData.get("sort"),
   });
-  if (!parsed.success) return { error: "Datos inválidos" };
+  if (!parsed.success) return { error: firstError(parsed.error) };
 
   const { packageId, code, price, ...data } = parsed.data;
   const active = formData.get("active") === "on";
@@ -635,7 +649,7 @@ export async function upsertAddOn(formData: FormData) {
     billing: formData.get("billing"),
     sort: formData.get("sort"),
   });
-  if (!parsed.success) return { error: "Datos inválidos" };
+  if (!parsed.success) return { error: firstError(parsed.error) };
 
   const { addOnId, code, price, ...data } = parsed.data;
   const active = formData.get("active") === "on";
@@ -690,7 +704,7 @@ const locationSchema = z.object({
   state: z.string().min(2).max(60),
   address: z.string().max(200).optional(),
   description: z.string().max(1000).optional(),
-  status: z.enum(["OPEN", "COMING_SOON", "CLOSED"]),
+  status: z.enum(["OPEN", "PRESALE", "COMING_SOON", "CLOSED"]),
   openingHour: z.coerce.number().int().min(0).max(23),
   closingHour: z.coerce.number().int().min(1).max(24),
   sort: z.coerce.number().int().min(0).max(999),
@@ -715,7 +729,7 @@ export async function upsertLocation(formData: FormData) {
     closingHour: formData.get("closingHour"),
     sort: formData.get("sort"),
   });
-  if (!parsed.success) return { error: "Datos inválidos" };
+  if (!parsed.success) return { error: firstError(parsed.error) };
   if (parsed.data.closingHour <= parsed.data.openingHour)
     return { error: "El cierre debe ser posterior a la apertura" };
 
@@ -788,7 +802,7 @@ export async function upsertRoomType(formData: FormData) {
     memberPrice: formData.get("memberPrice") || undefined,
     creditsPerHour: formData.get("creditsPerHour") || undefined,
   });
-  if (!parsed.success) return { error: "Datos inválidos" };
+  if (!parsed.success) return { error: firstError(parsed.error) };
 
   const { roomTypeId, locationId, code, basePrice, memberPrice, creditsPerHour, ...data } =
     parsed.data;
@@ -865,7 +879,7 @@ export async function upsertRoom(formData: FormData) {
     widthMeters: formData.get("widthMeters") || undefined,
     lengthMeters: formData.get("lengthMeters") || undefined,
   });
-  if (!parsed.success) return { error: "Datos inválidos" };
+  if (!parsed.success) return { error: firstError(parsed.error) };
 
   const { roomId, priceOverride, widthMeters, lengthMeters, ...data } = parsed.data;
   const amenities = parseList(formData.get("amenities"));
@@ -960,7 +974,7 @@ export async function updatePractitionerProfile(formData: FormData) {
     phone: formData.get("phone") || undefined,
     specialties: formData.get("specialties") || undefined,
   });
-  if (!parsed.success) return { error: "Datos inválidos" };
+  if (!parsed.success) return { error: firstError(parsed.error) };
 
   const profile = await db.practitionerProfile.findUnique({
     where: { id: parsed.data.practitionerId },
@@ -1028,5 +1042,5 @@ export async function runJobAction(job: string) {
     data: { processed: result.processed },
   });
   revalidatePath("/admin/settings");
-  return { ok: true };
+  return { ok: true, message: `${result.processed} procesados` };
 }

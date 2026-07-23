@@ -29,7 +29,7 @@
   /* Semánticos (muted, nunca chillones) */
   --color-sage: #55705d;
   --color-sage-soft: #e8efe9;
-  --color-amber-warm: #9a7a35;
+  --color-amber-warm: #7a5d1a; /* ≥4.5:1 sobre amber-soft (WCAG 1.4.3) */
   --color-amber-soft: #f4edda;
   --color-rust: #9c4036;
   --color-rust-soft: #f5e4e2;
@@ -121,6 +121,13 @@
     *::after {
       animation-duration: 0.01ms !important;
       transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+    /* Conserva los indicadores de carga: animarlos comunica estado. */
+    .animate-spin,
+    [role="progressbar"],
+    [data-loading] {
+      animation-duration: revert !important;
     }
   }
 }

@@ -3,8 +3,11 @@ import { cn } from "@/lib/utils";
 
 /** Inputs nativos estilizados. Sin dependencias de UI externas. */
 
+// Borde en reposo `stone` (3.75:1 sobre surface): cumple WCAG 1.4.11 —el borde
+// es el único límite del control—. En focus sube a `ink`. Placeholder y hint
+// usan `stone-deep` (≥5:1) para cumplir 1.4.3 como texto informativo.
 const fieldBase =
-  "w-full rounded-xl border border-line-strong bg-surface px-4 text-sm text-ink placeholder:text-stone transition-colors focus:border-ink focus:outline-none disabled:opacity-50";
+  "w-full rounded-xl border border-stone bg-surface px-4 text-sm text-ink placeholder:text-stone-deep transition-colors focus:border-ink focus:outline-none disabled:opacity-50";
 
 export const Input = React.forwardRef<HTMLInputElement, React.InputHTMLAttributes<HTMLInputElement>>(
   function Input({ className, ...props }, ref) {
@@ -68,8 +71,12 @@ export function Field({
     <div className={cn("w-full", className)}>
       <Label htmlFor={htmlFor}>{label}</Label>
       {children}
-      {hint && !error && <p className="mt-1.5 text-xs text-stone">{hint}</p>}
-      {error && <p className="mt-1.5 text-xs font-medium text-rust">{error}</p>}
+      {hint && !error && <p className="mt-1.5 text-xs text-stone-deep">{hint}</p>}
+      {error && (
+        <p role="alert" className="mt-1.5 text-xs font-medium text-rust">
+          {error}
+        </p>
+      )}
     </div>
   );
 }

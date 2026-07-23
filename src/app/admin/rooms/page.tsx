@@ -104,7 +104,11 @@ function RoomFields({
         </Field>
       </div>
       <div className="mt-3">
-        <Field label="Amenidades (separadas por coma)" htmlFor={`amenities-${uid}`}>
+        <Field
+          label="Amenidades"
+          htmlFor={`amenities-${uid}`}
+          hint="Sepáralas con comas: Micrófono, Luz de video, Fondo profesional"
+        >
           <Input
             id={`amenities-${uid}`}
             name="amenities"
@@ -157,7 +161,9 @@ export default async function AdminRoomsPage() {
                     <TH className="text-right">Créditos/h</TH>
                     <TH className="text-right">Reservas</TH>
                     <TH>Estado</TH>
-                    <TH></TH>
+                    <TH>
+                      <span className="sr-only">Acciones</span>
+                    </TH>
                   </TR>
                 </THead>
                 <TBody>
@@ -177,7 +183,7 @@ export default async function AdminRoomsPage() {
                             room.hourlyPriceCentsOverride ?? room.roomType.baseHourlyPriceCents
                           )}
                           {room.hourlyPriceCentsOverride != null && (
-                            <span className="block text-[10px] text-stone">override</span>
+                            <span className="block text-[10px] text-stone-deep">override</span>
                           )}
                         </TD>
                         <TD className="text-right">
@@ -193,7 +199,7 @@ export default async function AdminRoomsPage() {
                           <ActionButton
                             action={toggle}
                             label={room.active ? "Desactivar" : "Activar"}
-                            variant="ghost"
+                            variant="outline"
                           />
                         </TD>
                       </TR>
@@ -222,7 +228,7 @@ export default async function AdminRoomsPage() {
                     <RoomFields locationId={loc.id} roomTypes={loc.roomTypes} />
                   </ActionForm>
                 ) : (
-                  <p className="text-sm text-stone">
+                  <p className="text-sm text-stone-deep">
                     Este establecimiento aún no tiene tipos de sala. Créalos primero en{" "}
                     <span className="font-semibold">Planes y precios</span>.
                   </p>
@@ -244,7 +250,7 @@ export default async function AdminRoomsPage() {
                     <details key={room.id} className="rounded-xl bg-paper px-4 py-3">
                       <summary className="cursor-pointer text-sm font-semibold">
                         {room.name}{" "}
-                        <span className="font-normal text-stone">· {room.roomType.name}</span>
+                        <span className="font-normal text-stone-deep">· {room.roomType.name}</span>
                       </summary>
                       <ActionForm
                         action={upsertRoom}

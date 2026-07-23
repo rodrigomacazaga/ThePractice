@@ -72,7 +72,11 @@ function LocationFields({ loc }: { loc?: Location }) {
         </Field>
       </div>
       <div className="mt-3">
-        <Field label="Amenidades (separadas por coma)" htmlFor={`amenities-${uid}`}>
+        <Field
+          label="Amenidades"
+          htmlFor={`amenities-${uid}`}
+          hint="Sepáralas con comas: Recepción compartida, WiFi, Coffee station"
+        >
           <Input
             id={`amenities-${uid}`}
             name="amenities"
@@ -91,7 +95,7 @@ function LocationFields({ loc }: { loc?: Location }) {
             ))}
           </Select>
         </Field>
-        <Field label="Abre (hora)" htmlFor={`openingHour-${uid}`}>
+        <Field label="Abre (hora)" htmlFor={`openingHour-${uid}`} hint="0–23">
           <Input
             id={`openingHour-${uid}`}
             name="openingHour"
@@ -101,7 +105,7 @@ function LocationFields({ loc }: { loc?: Location }) {
             defaultValue={loc?.openingHour ?? 7}
           />
         </Field>
-        <Field label="Cierra (hora)" htmlFor={`closingHour-${uid}`}>
+        <Field label="Cierra (hora)" htmlFor={`closingHour-${uid}`} hint="1–24">
           <Input
             id={`closingHour-${uid}`}
             name="closingHour"
@@ -183,14 +187,14 @@ export default async function AdminLocationsPage() {
                   ].map((s) => (
                     <div key={s.label} className="rounded-xl bg-paper px-2 py-3">
                       <p className="font-display text-lg font-bold">{s.value}</p>
-                      <p className="text-[10px] font-semibold tracking-wider whitespace-nowrap text-stone uppercase">
+                      <p className="text-[10px] font-semibold tracking-wider whitespace-nowrap text-stone-deep uppercase">
                         {s.label}
                       </p>
                     </div>
                   ))}
                 </div>
 
-                <p className="mt-4 text-xs text-stone">
+                <p className="mt-4 text-xs text-stone-deep">
                   slug: <span className="font-mono">/locations/{loc.slug}</span> (fijo — es URL
                   pública)
                 </p>

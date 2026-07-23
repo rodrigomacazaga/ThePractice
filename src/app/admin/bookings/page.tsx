@@ -22,6 +22,17 @@ const STATUS_VARIANT: Record<string, "sage" | "amber" | "rust" | "default" | "in
   ADMIN_BLOCKED: "default",
 };
 
+const STATUS_LABEL: Record<string, string> = {
+  CONFIRMED: "Confirmada",
+  PENDING_PAYMENT: "Pago pendiente",
+  CHECKED_IN: "Check-in",
+  NO_SHOW: "No asistió",
+  LATE_CANCELLED: "Cancelada tarde",
+  CANCELLED: "Cancelada",
+  ADMIN_BLOCKED: "Bloqueo",
+  COMPLETED: "Completada",
+};
+
 export default async function AdminBookingsPage() {
   await requireAdmin();
 
@@ -92,7 +103,7 @@ export default async function AdminBookingsPage() {
                                   : (b.practitioner?.user.name ?? "—")}
                               </p>
                               <Badge variant={STATUS_VARIANT[b.status] ?? "default"}>
-                                {b.status}
+                                {STATUS_LABEL[b.status] ?? b.status}
                               </Badge>
                             </div>
                             <p className="mt-1 text-xs text-stone-deep">
@@ -129,7 +140,7 @@ export default async function AdminBookingsPage() {
                 </CardHeader>
                 <CardContent>
                   {loc.rooms.length === 0 ? (
-                    <p className="text-sm text-stone">
+                    <p className="text-sm text-stone-deep">
                       Esta sede aún no tiene salas activas.
                     </p>
                   ) : (

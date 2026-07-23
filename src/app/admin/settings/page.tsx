@@ -1,3 +1,4 @@
+import { X } from "lucide-react";
 import type { Location } from "@prisma/client";
 import { requireAdmin } from "@/lib/auth-helpers";
 import { db } from "@/lib/db";
@@ -110,7 +111,7 @@ function SettingsForm({
         ))}
       </div>
       {location && (
-        <p className="mt-4 text-xs text-stone">
+        <p className="mt-4 text-xs text-stone-deep">
           Un valor en blanco no borra nada. Para que un campo vuelva a heredar el global,
           usa “Quitar override”.
         </p>
@@ -153,7 +154,7 @@ export default async function AdminSettingsPage() {
                   <div key={loc.id} className="space-y-5">
                     <SettingsForm location={loc} values={values} />
                     <div className="border-t border-line pt-4">
-                      <p className="mb-2 text-xs font-semibold text-stone uppercase">
+                      <p className="mb-2 text-xs font-semibold text-stone-deep uppercase">
                         Quitar override (vuelve a heredar el global)
                       </p>
                       <div className="flex flex-wrap gap-2">
@@ -169,12 +170,16 @@ export default async function AdminSettingsPage() {
                                 fd.set("key", v.key);
                                 return removeSettingOverride(fd);
                               }}
-                              label={`✕ ${v.label}`}
+                              label={
+                                <>
+                                  <X className="h-3 w-3" /> {v.label}
+                                </>
+                              }
                               variant="outline"
                             />
                           ))}
                         {values.every((v) => !v.isOverride) && (
-                          <span className="text-sm text-stone">
+                          <span className="text-sm text-stone-deep">
                             Sin overrides: esta sede hereda todo del global.
                           </span>
                         )}
