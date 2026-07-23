@@ -11,6 +11,9 @@ import { Modal } from "@/components/ui/modal";
 import { ActionForm, ActionButton } from "@/components/dashboard/action-form";
 import {
   deletePlan,
+  deleteRoomType,
+  deleteHourPackage,
+  deleteAddOn,
   updatePlanPricing,
   updateRoomTypePricing,
   upsertPlan,
@@ -522,12 +525,18 @@ export default async function AdminCatalogPage() {
                 </div>
               </ActionForm>
 
-              <div className="mt-5 border-t border-line pt-4">
+              <div className="mt-5 flex items-center gap-3 border-t border-line pt-4">
                 <Modal trigger="Editar atributos" title={`Editar ${rt.name}`}>
                   <ActionForm action={upsertRoomType} submitLabel="Guardar atributos">
                     <RoomTypeAttributeFields rt={rt} />
                   </ActionForm>
                 </Modal>
+                <ActionButton
+                  action={deleteRoomType.bind(null, rt.id)}
+                  label="Eliminar"
+                  variant="danger"
+                  confirmText={`¿Eliminar el tipo "${rt.name}"? Si no tiene salas se borra definitivamente; si tiene salas solo se desactiva.`}
+                />
               </div>
             </CardContent>
           </Card>
@@ -615,6 +624,12 @@ export default async function AdminCatalogPage() {
                       <HourPackageFields pkg={pkg} />
                     </ActionForm>
                   </Modal>
+                  <ActionButton
+                    action={deleteHourPackage.bind(null, pkg.id)}
+                    label="Eliminar"
+                    variant="danger"
+                    confirmText={`¿Eliminar el paquete "${pkg.name}"? Si no tiene compras se borra definitivamente; si tiene compras solo se desactiva.`}
+                  />
                 </span>
               </div>
             ))}
@@ -654,6 +669,12 @@ export default async function AdminCatalogPage() {
                       <AddOnFields addon={addon} />
                     </ActionForm>
                   </Modal>
+                  <ActionButton
+                    action={deleteAddOn.bind(null, addon.id)}
+                    label="Eliminar"
+                    variant="danger"
+                    confirmText={`¿Eliminar el add-on "${addon.name}"? Si ningún practitioner lo tiene se borra definitivamente; si algún practitioner lo tiene solo se desactiva.`}
+                  />
                 </span>
               </div>
             ))}

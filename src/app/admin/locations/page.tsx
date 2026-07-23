@@ -7,8 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Field, Input, Textarea, Select } from "@/components/ui/form";
 import { Modal } from "@/components/ui/modal";
-import { ActionForm } from "@/components/dashboard/action-form";
-import { upsertLocation } from "../actions";
+import { ActionForm, ActionButton } from "@/components/dashboard/action-form";
+import { deleteLocation, upsertLocation } from "../actions";
 
 export const dynamic = "force-dynamic";
 
@@ -199,12 +199,18 @@ export default async function AdminLocationsPage() {
                   pública)
                 </p>
 
-                <div className="mt-4 border-t border-line pt-4">
+                <div className="mt-4 flex items-center gap-3 border-t border-line pt-4">
                   <Modal trigger="Editar ubicación" title={`Editar ${loc.shortName}`}>
                     <ActionForm action={upsertLocation} submitLabel="Guardar cambios">
                       <LocationFields loc={loc} />
                     </ActionForm>
                   </Modal>
+                  <ActionButton
+                    action={deleteLocation.bind(null, loc.id)}
+                    label="Eliminar"
+                    variant="danger"
+                    confirmText={`¿Eliminar ${loc.shortName}? Si no tiene salas, reservas ni leads se borra; si tiene, se cierra (status CLOSED).`}
+                  />
                 </div>
               </CardContent>
             </Card>

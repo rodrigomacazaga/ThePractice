@@ -10,7 +10,7 @@ import { Tabs } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Field, Input, Textarea, Select } from "@/components/ui/form";
 import { ActionForm, ActionButton } from "@/components/dashboard/action-form";
-import { toggleRoomActive, upsertRoom } from "../actions";
+import { deleteRoom, toggleRoomActive, upsertRoom } from "../actions";
 
 export const dynamic = "force-dynamic";
 
@@ -196,11 +196,19 @@ export default async function AdminRoomsPage() {
                           </Badge>
                         </TD>
                         <TD>
-                          <ActionButton
-                            action={toggle}
-                            label={room.active ? "Desactivar" : "Activar"}
-                            variant="outline"
-                          />
+                          <span className="inline-flex items-center gap-2">
+                            <ActionButton
+                              action={toggle}
+                              label={room.active ? "Desactivar" : "Activar"}
+                              variant="outline"
+                            />
+                            <ActionButton
+                              action={deleteRoom.bind(null, room.id)}
+                              label="Eliminar"
+                              variant="danger"
+                              confirmText={`¿Eliminar ${room.name}? Si no tiene reservas se borra; si tiene, se desactiva.`}
+                            />
+                          </span>
                         </TD>
                       </TR>
                     );

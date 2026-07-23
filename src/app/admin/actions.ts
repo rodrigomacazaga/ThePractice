@@ -571,6 +571,185 @@ const hourPackageSchema = z.object({
   sort: z.coerce.number().int().min(0).max(999),
 });
 
+// ------------------------------------------------------------
+// Bajas: hard delete si el objeto no tiene historial; si lo tiene, se
+// desactiva (o se cierra) para preservar reservas, compras y cobros.
+// ------------------------------------------------------------
+
+export async function deleteLocation(locationId: string) {
+  const session = await requireAdmin();
+  const loc = await db.location.findUnique({
+    where: { id: locationId },
+    include: { _count: { select: { rooms: true, bookings: true, leads: true } } },
+  });
+  if (!loc) return { error: "Ubicación no encontrada" };
+
+  const hasHistory =
+    loc._count.rooms > 0 || loc._count.bookings > 0 || loc._count.leads > 0;
+  if (hasHistory) {
+    if (loc.status === "CLOSED")
+      return { error: "La ubicación ya está cerrada (tiene salas/reservas/leads, no se puede borrar)" };
+    await db.location.update({ where: { id: locationId }, data: { status: "CLOSED" } });
+    await audit({
+      actorId: session.user.id,
+      action: "location.closed",
+      entity: "Location",
+      entityId: locationId,
+      data: { reason: "tiene historial (salas/reservas/leads)" },
+    });
+  } else {
+    await db.location.delete({ where: { id: locationId } });
+    await audit({
+      actorId: session.user.id,
+      action: "location.deleted",
+      entity: "Location",
+      entityId: locationId,
+      data: { name: loc.name },
+    });
+  }
+  revalidatePath("/admin/locations");
+  revalidatePath("/locations");
+  revalidatePath(`/locations/${loc.slug}`);
+  revalidatePath("/the-practice");
+  revalidatePath("/la-ceiba");
+  return { ok: true };
+}
+
+export async function deleteRoomType(roomTypeId: string) {
+  const session = await requireAdmin();
+  const rt = await db.roomType.findUnique({
+    where: { id: roomTypeId },
+    include: { _count: { select: { rooms: true } } },
+  });
+  if (!rt) return { error: "Tipo de sala no encontrado" };
+
+  if (rt._count.rooms > 0) {
+    if (!rt.active) return { error: "El tipo ya está inactivo" };
+    await db.roomType.update({ where: { id: roomTypeId }, data: { active: false } });
+    await audit({
+      actorId: session.user.id,
+      action: "roomtype.deactivated",
+      entity: "RoomType",
+      entityId: roomTypeId,
+      data: { reason: `${rt._count.rooms} salas de este tipo` },
+    });
+  } else {
+    await db.roomType.delete({ where: { id: roomTypeId } });
+    await audit({
+      actorId: session.user.id,
+      action: "roomtype.deleted",
+      entity: "RoomType",
+      entityId: roomTypeId,
+      data: { name: rt.name },
+    });
+  }
+  revalidatePath("/admin/catalog");
+  revalidatePath("/admin/rooms");
+  revalidatePath("/rooms");
+  revalidatePath("/la-ceiba");
+  return { ok: true };
+}
+
+export async function deleteRoom(roomId: string) {
+  const session = await requireAdmin();
+  const room = await db.room.findUnique({
+    where: { id: roomId },
+    include: { _count: { select: { bookings: true } } },
+  });
+  if (!room) return { error: "Sala no encontrada" };
+
+  if (room._count.bookings > 0) {
+    if (!room.active) return { error: "La sala ya está inactiva" };
+    await db.room.update({ where: { id: roomId }, data: { active: false } });
+    await audit({
+      actorId: session.user.id,
+      action: "room.deactivated",
+      entity: "Room",
+      entityId: roomId,
+      data: { reason: `${room._count.bookings} reservas` },
+    });
+  } else {
+    await db.room.delete({ where: { id: roomId } });
+    await audit({
+      actorId: session.user.id,
+      action: "room.deleted",
+      entity: "Room",
+      entityId: roomId,
+      data: { name: room.name },
+    });
+  }
+  revalidatePath("/admin/rooms");
+  revalidatePath("/rooms");
+  revalidatePath("/la-ceiba");
+  return { ok: true };
+}
+
+export async function deleteHourPackage(packageId: string) {
+  const session = await requireAdmin();
+  const pkg = await db.hourPackage.findUnique({
+    where: { id: packageId },
+    include: { _count: { select: { purchases: true } } },
+  });
+  if (!pkg) return { error: "Paquete no encontrado" };
+
+  if (pkg._count.purchases > 0) {
+    if (!pkg.active) return { error: "El paquete ya está inactivo" };
+    await db.hourPackage.update({ where: { id: packageId }, data: { active: false } });
+    await audit({
+      actorId: session.user.id,
+      action: "hourpackage.deactivated",
+      entity: "HourPackage",
+      entityId: packageId,
+      data: { reason: `${pkg._count.purchases} compras` },
+    });
+  } else {
+    await db.hourPackage.delete({ where: { id: packageId } });
+    await audit({
+      actorId: session.user.id,
+      action: "hourpackage.deleted",
+      entity: "HourPackage",
+      entityId: packageId,
+      data: { name: pkg.name },
+    });
+  }
+  revalidatePath("/admin/catalog");
+  revalidatePath("/memberships");
+  return { ok: true };
+}
+
+export async function deleteAddOn(addOnId: string) {
+  const session = await requireAdmin();
+  const addon = await db.addOn.findUnique({
+    where: { id: addOnId },
+    include: { _count: { select: { practitioners: true } } },
+  });
+  if (!addon) return { error: "Add-on no encontrado" };
+
+  if (addon._count.practitioners > 0) {
+    if (!addon.active) return { error: "El add-on ya está inactivo" };
+    await db.addOn.update({ where: { id: addOnId }, data: { active: false } });
+    await audit({
+      actorId: session.user.id,
+      action: "addon.deactivated",
+      entity: "AddOn",
+      entityId: addOnId,
+      data: { reason: `${addon._count.practitioners} practitioners lo tienen` },
+    });
+  } else {
+    await db.addOn.delete({ where: { id: addOnId } });
+    await audit({
+      actorId: session.user.id,
+      action: "addon.deleted",
+      entity: "AddOn",
+      entityId: addOnId,
+      data: { name: addon.name },
+    });
+  }
+  revalidatePath("/admin/catalog");
+  revalidatePath("/memberships");
+  return { ok: true };
+}
+
 /**
  * Alta y edición de paquetes de horas. El código es inmutable tras crear
  * (referencia de compras y cobros). Precio en MXN → centavos.

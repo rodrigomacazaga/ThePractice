@@ -29,6 +29,21 @@ const STATUS_META: Record<string, { label: string; variant: "sage" | "amber" | "
   EXPIRED: { label: "Vencido", variant: "rust" },
 };
 
+// Etiqueta legible de la etapa del lead (pipeline de /apply) para el badge de origen.
+const LEAD_STATUS_LABEL: Record<string, string> = {
+  NEW: "Aplicación recibida",
+  CONTACTED: "Contactado",
+  QUALIFIED: "Calificado",
+  CALL_SCHEDULED: "Llamada agendada",
+  PAYMENT_LINK_SENT: "Pendiente de pago",
+  DEPOSIT_PAID: "Depósito pagado",
+  FOUNDER_RESERVED: "Founder reservado",
+  CONVERTED: "Convertido",
+  NOT_COMPATIBLE: "No compatible",
+  NOT_INTERESTED: "No interesado",
+  LOST: "Perdido",
+};
+
 export default async function AdminPractitionersPage() {
   await requireAdmin();
 
@@ -42,6 +57,17 @@ export default async function AdminPractitionersPage() {
       microsite: true,
     },
   });
+
+  // Liga por email con el pipeline de leads: un practitioner puede venir de una
+  // aplicación de /apply. Una sola query + match en memoria (evita N+1).
+  const applicationLeads = await db.lead.findMany({
+    where: { type: "PRACTITIONER_APPLICATION" },
+    select: { email: true, status: true, createdAt: true },
+  });
+  const leadByEmail = new Map<string, (typeof applicationLeads)[number]>();
+  for (const lead of applicationLeads) {
+    leadByEmail.set(lead.email.toLowerCase(), lead);
+  }
 
   return (
     <>
@@ -67,6 +93,7 @@ export default async function AdminPractitionersPage() {
             const reject = rejectPractitioner.bind(null, p.id);
             const feature = toggleFeatured.bind(null, p.id);
             const toggleActive = toggleUserActive.bind(null, p.user.id);
+            const originLead = p.user.email ? leadByEmail.get(p.user.email.toLowerCase()) : undefined;
 
             return (
               <div
@@ -84,6 +111,11 @@ export default async function AdminPractitionersPage() {
                         <Badge variant="ink">{p.membership.plan.name}</Badge>
                       )}
                       {!p.user.active && <Badge variant="rust">Cuenta inactiva</Badge>}
+                      {originLead && (
+                        <Badge variant="default">
+                          Vino del lead · {LEAD_STATUS_LABEL[originLead.status] ?? originLead.status}
+                        </Badge>
+                      )}
                     </div>
                     <p className="mt-0.5 text-xs text-stone-deep">
                       {p.user.email} · /p/{p.slug} · {p.specialties.join(", ") || "sin especialidad"} ·

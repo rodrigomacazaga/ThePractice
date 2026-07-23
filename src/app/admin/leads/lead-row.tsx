@@ -62,8 +62,27 @@ const STATUS_LABEL: Record<string, string> = {
   LOST: "Perdido",
 };
 
-export function LeadRow({ lead }: { lead: LeadData }) {
+// Etiqueta y color del verificationStatus del perfil ya registrado (vía /register).
+const REGISTERED_META: Record<string, { label: string; variant: "sage" | "amber" | "rust" | "default" }> = {
+  APPROVED: { label: "Aprobado", variant: "sage" },
+  PENDING_REVIEW: { label: "Por verificar", variant: "amber" },
+  REJECTED: { label: "Rechazado", variant: "rust" },
+  NEEDS_UPDATE: { label: "Requiere update", variant: "amber" },
+  EXPIRED: { label: "Vencido", variant: "rust" },
+};
+
+export function LeadRow({
+  lead,
+  registeredStatus = null,
+}: {
+  lead: LeadData;
+  registeredStatus?: string | null;
+}) {
   const [open, setOpen] = useState(false);
+  const registered = registeredStatus ? REGISTERED_META[registeredStatus] ?? {
+    label: registeredStatus,
+    variant: "default" as const,
+  } : null;
 
   return (
     <div className="rounded-2xl border border-line bg-surface shadow-(--shadow-card)">
@@ -78,6 +97,9 @@ export function LeadRow({ lead }: { lead: LeadData }) {
               {STATUS_LABEL[lead.status] ?? lead.status}
             </Badge>
             <Badge variant="outline">{lead.typeLabel}</Badge>
+            {registered && (
+              <Badge variant={registered.variant}>Registrado · {registered.label}</Badge>
+            )}
           </div>
           <p className="mt-1 text-xs text-stone-deep">
             {[lead.specialty, lead.city, lead.source, lead.createdAtLabel]
@@ -94,6 +116,14 @@ export function LeadRow({ lead }: { lead: LeadData }) {
         <div className="grid gap-6 border-t border-line p-5 lg:grid-cols-2">
           {/* DATOS */}
           <div className="space-y-3 text-sm">
+            {registered && (
+              <a
+                href="/admin/practitioners"
+                className="inline-flex w-fit items-center gap-1.5 text-xs font-medium text-ink underline"
+              >
+                Ya registrado como practitioner · {registered.label} → ver en Practitioners
+              </a>
+            )}
             <p>
               <a href={`mailto:${lead.email}`} className="font-medium text-ink underline">
                 {lead.email}

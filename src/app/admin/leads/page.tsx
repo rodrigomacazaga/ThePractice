@@ -36,6 +36,18 @@ export default async function AdminLeadsPage({ searchParams }: Props) {
   const counts = await db.lead.groupBy({ by: ["status"], _count: true });
   const countFor = (s: string) => counts.find((c) => c.status === s)?._count ?? 0;
 
+  // Liga por email con los practitioners ya registrados (vía /register): permite
+  // ver si un lead de aplicación ya creó su perfil. Una sola query + match en memoria.
+  const registeredProfiles = await db.practitionerProfile.findMany({
+    include: { user: { select: { email: true } } },
+  });
+  const registeredByEmail = new Map<string, string>();
+  for (const profile of registeredProfiles) {
+    if (profile.user.email) {
+      registeredByEmail.set(profile.user.email.toLowerCase(), profile.verificationStatus);
+    }
+  }
+
   const PIPELINE = [
     { key: "", label: "Todos" },
     { key: "NEW", label: `Nuevos (${countFor("NEW")})` },
@@ -86,6 +98,11 @@ export default async function AdminLeadsPage({ searchParams }: Props) {
           {leads.map((lead) => (
             <LeadRow
               key={lead.id}
+              registeredStatus={
+                lead.type === "PRACTITIONER_APPLICATION"
+                  ? registeredByEmail.get(lead.email.toLowerCase()) ?? null
+                  : null
+              }
               lead={{
                 id: lead.id,
                 name: lead.name,
