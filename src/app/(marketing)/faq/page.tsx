@@ -100,8 +100,9 @@ export default async function FaqPage() {
         eyebrow="Preguntas frecuentes"
         title="Respuestas claras."
         description="Si no encuentras lo que buscas, escríbenos: hola@thepractice.mx"
+        align="center"
       />
-      <div className="mt-12 max-w-3xl space-y-12">
+      <div className="mx-auto mt-12 max-w-3xl space-y-12">
         {sections.map((section) => (
           <div key={section.title}>
             <h2 className="eyebrow">{section.title}</h2>
@@ -111,7 +112,7 @@ export default async function FaqPage() {
           </div>
         ))}
       </div>
-      <div className="mt-16 max-w-3xl rounded-2xl border border-line bg-surface p-8 text-center">
+      <div className="mx-auto mt-16 max-w-3xl rounded-2xl border border-line bg-surface p-8 text-center">
         <p className="font-display text-base font-bold">¿Otra pregunta?</p>
         <ButtonLink href="/contact" variant="outline" size="lg" className="mt-4">
           Contáctanos
