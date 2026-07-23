@@ -144,7 +144,7 @@ export default async function ThePracticePage() {
               Ver precios
             </ButtonLink>
           </div>
-          <p className="mt-3 text-sm text-stone">Reserva por hora. Sin membresía.</p>
+          <p className="mt-3 text-sm text-stone-deep">Reserva por hora. Sin membresía.</p>
           <div className="mt-10 flex flex-wrap gap-2">
             {AUDIENCES.map((a) => (
               <Badge key={a} variant="outline" size="md">
@@ -156,7 +156,7 @@ export default async function ThePracticePage() {
 
         <div className="relative animate-fade-in">
           <FloorPlanArt className="mx-auto max-w-md lg:max-w-none" />
-          <p className="mt-4 text-center font-display text-[10px] font-semibold tracking-[0.25em] text-stone uppercase">
+          <p className="mt-4 text-center font-display text-[10px] font-semibold tracking-[0.25em] text-stone-deep uppercase">
             The Practice La Ceiba · Planta arquitectónica
           </p>
         </div>
@@ -396,7 +396,7 @@ export default async function ThePracticePage() {
             <p className="eyebrow">Reserva por hora</p>
             <p className="mt-4 font-display text-3xl font-bold tracking-tight">
               desde {formatMXN(minHourly)}
-              <span className="text-base font-semibold text-stone"> /hora</span>
+              <span className="text-base font-semibold text-stone-deep"> /hora</span>
             </p>
             <p className="mt-3 flex-1 text-sm leading-relaxed text-stone-deep">
               Sin membresía, sin permanencia. Ideal para conocer The Practice,
@@ -439,7 +439,7 @@ export default async function ThePracticePage() {
               <p className="eyebrow">Premium</p>
               <p className="mt-4 font-display text-3xl font-bold tracking-tight">
                 {formatMXN(premium.monthlyPriceCents)}
-                <span className="text-base font-semibold text-stone"> /mes</span>
+                <span className="text-base font-semibold text-stone-deep"> /mes</span>
               </p>
               <p className="mt-3 flex-1 text-sm leading-relaxed text-stone-deep">
                 Para mayor volumen y prioridad. {formatCredits(premium.includedCredits)}{" "}

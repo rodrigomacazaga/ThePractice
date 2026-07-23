@@ -133,10 +133,10 @@ export default async function MembershipsPage() {
                 </ul>
               </div>
               <div>
-                <p className="text-xs text-stone">Reserva</p>
+                <p className="text-xs text-stone-deep">Reserva</p>
                 <p className="font-display text-3xl font-bold tracking-tight">
                   desde {formatMXN(minHourly)}
-                  <span className="text-base font-semibold text-stone"> /hora</span>
+                  <span className="text-base font-semibold text-stone-deep"> /hora</span>
                 </p>
                 <ButtonLink href="/apply" size="lg" className="mt-4 w-full">
                   Aplica y reserva tu primera sala
@@ -203,7 +203,7 @@ export default async function MembershipsPage() {
                 >
                   <p className="font-display text-3xl font-bold tracking-tight">
                     {formatCredits(pkg.hours)}
-                    <span className="ml-1 text-base font-semibold text-stone">horas</span>
+                    <span className="ml-1 text-base font-semibold text-stone-deep">horas</span>
                   </p>
                   <p className="mt-4 font-display text-xl font-bold">{formatMXN(pkg.priceCents)}</p>
                   <p className="mt-1 text-xs text-stone-deep">
@@ -311,7 +311,7 @@ export default async function MembershipsPage() {
                   </div>
                   <p className="shrink-0 font-display text-sm font-bold">
                     {formatMXN(addon.priceCents)}
-                    <span className="block text-right font-sans text-[10px] font-normal text-stone">
+                    <span className="block text-right font-sans text-[10px] font-normal text-stone-deep">
                       {addon.billing === "MONTHLY" ? "/mes" : "único"}
                     </span>
                   </p>

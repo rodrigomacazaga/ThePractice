@@ -102,13 +102,13 @@ export default async function HowItWorksPage() {
                   {formatCredits(rt.creditsPerHour)}{" "}
                   {rt.creditsPerHour === 1 ? "crédito" : "créditos"}/hora
                 </p>
-                <p className="mt-1 text-xs text-paper/50">
+                <p className="mt-1 text-xs text-paper/70">
                   {formatMXN(rt.baseHourlyPriceCents)} /hora
                 </p>
               </div>
             ))}
           </div>
-          <p className="mt-6 text-xs text-paper/40">
+          <p className="mt-6 text-xs text-paper/70">
             Las tasas de consumo son configurables y pueden variar por ubicación. Consulta tu panel.
           </p>
         </div>

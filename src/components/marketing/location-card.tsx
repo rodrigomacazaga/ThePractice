@@ -34,7 +34,7 @@ export function LocationCard({
         <div className="flex items-center justify-between">
           <Badge variant={badgeVariant}>{badgeLabel}</Badge>
           {(isOpen || isPresale) && (
-            <ArrowUpRight className="h-5 w-5 text-paper/40 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:text-paper" />
+            <ArrowUpRight className="h-5 w-5 text-paper/70 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:text-paper" />
           )}
         </div>
         <p className="mt-8 eyebrow-light">The Practice</p>

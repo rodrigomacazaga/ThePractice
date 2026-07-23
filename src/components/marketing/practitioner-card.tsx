@@ -70,13 +70,13 @@ export function PractitionerCard({ practitioner }: { practitioner: DirectoryPrac
         <p className="text-sm">
           {practitioner.sessionPriceFromCents != null ? (
             <>
-              <span className="text-xs text-stone">desde</span>{" "}
+              <span className="text-xs text-stone-deep">desde</span>{" "}
               <span className="font-display font-bold">
                 {formatMXN(practitioner.sessionPriceFromCents)}
               </span>
             </>
           ) : (
-            <span className="text-xs text-stone">Consultar precio</span>
+            <span className="text-xs text-stone-deep">Consultar precio</span>
           )}
         </p>
         <div className="flex gap-2">

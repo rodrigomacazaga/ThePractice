@@ -111,7 +111,7 @@ export function CreditCalculator({
           <span className="text-2xl font-bold">{formatCredits(selected.credits)} créditos</span>
           <span className="ml-2 text-paper/60">al mes con {selected.name}</span>
         </p>
-        <p className="mt-0.5 text-xs text-paper/50">
+        <p className="mt-0.5 text-xs text-paper/70">
           1 crédito = 1 hora de sala estándar. Las reservas son en bloques de 1 hora.
         </p>
       </div>
@@ -136,12 +136,12 @@ export function CreditCalculator({
               )}
               <div className="min-w-0 flex-1">
                 <p className="truncate font-display text-xs font-bold">{rt.name}</p>
-                <p className="text-[11px] text-stone">
+                <p className="text-[11px] text-stone-deep">
                   {formatCredits(rt.creditsPerHour)} cr/hora
                 </p>
               </div>
               <p className="font-display text-lg font-bold whitespace-nowrap">
-                {hours} <span className="text-xs font-semibold text-stone">h</span>
+                {hours} <span className="text-xs font-semibold text-stone-deep">h</span>
               </p>
             </div>
           );
@@ -168,7 +168,7 @@ export function CreditCalculator({
               >
                 <div className="min-w-0">
                   <p className="truncate font-display text-xs font-bold">{rt.name}</p>
-                  <p className="text-[11px] text-stone">horas / semana</p>
+                  <p className="text-[11px] text-stone-deep">horas / semana</p>
                 </div>
                 <div className="flex items-center gap-2">
                   <button

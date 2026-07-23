@@ -50,12 +50,12 @@ export function PlanCard({
         <span className="font-display text-4xl font-bold tracking-tight">
           {formatMXN(price)}
         </span>
-        <span className={cn("pb-1 text-sm", plan.highlighted ? "text-paper/60" : "text-stone")}>
+        <span className={cn("pb-1 text-sm", plan.highlighted ? "text-paper/60" : "text-stone-deep")}>
           /mes
         </span>
       </div>
       {founder && (
-        <p className={cn("mt-1 text-xs", plan.highlighted ? "text-paper/50" : "text-stone")}>
+        <p className={cn("mt-1 text-xs", plan.highlighted ? "text-paper/70" : "text-stone-deep")}>
           Precio regular: <s>{formatMXN(plan.monthlyPriceCents)}</s> · tarifa founder
           mientras tu membresía siga activa
         </p>
@@ -72,7 +72,7 @@ export function PlanCard({
           <span
             className={cn(
               "block font-sans text-[11px] font-normal",
-              plan.highlighted ? "text-paper/50" : "text-stone"
+              plan.highlighted ? "text-paper/70" : "text-stone-deep"
             )}
           >
             = {formatCredits(plan.includedCredits)} h de sala estándar

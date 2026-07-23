@@ -42,7 +42,7 @@ export function DirectoryFilters({
     >
       <div className="grid gap-3 lg:grid-cols-[1.5fr_1fr_1fr_1fr_auto]">
         <div className="relative">
-          <Search className="absolute top-1/2 left-3.5 h-4 w-4 -translate-y-1/2 text-stone" />
+          <Search className="absolute top-1/2 left-3.5 h-4 w-4 -translate-y-1/2 text-stone-deep" />
           <Input
             placeholder="Buscar por nombre o tema…"
             className="pl-10"

@@ -120,7 +120,7 @@ export function ApplyForm({
             <ArrowRight className="h-4 w-4" />
           </ButtonLink>
         </div>
-        <p className="mx-auto mt-5 max-w-sm text-xs leading-relaxed text-stone">
+        <p className="mx-auto mt-5 max-w-sm text-xs leading-relaxed text-stone-deep">
           Enviar tu aplicación no te compromete a contratar. Escribirnos por
           WhatsApp es opcional: nosotros te buscamos de cualquier forma.
         </p>
@@ -296,7 +296,7 @@ export function ApplyForm({
         {status === "sending" && <Loader2 className="h-4 w-4 animate-spin" />}
         Enviar aplicación
       </Button>
-      <p className="mt-3 text-center text-xs text-stone">
+      <p className="mt-3 text-center text-xs text-stone-deep">
         Sin compromiso. Tus datos se usan solo para contactarte sobre The Practice.
       </p>
     </form>

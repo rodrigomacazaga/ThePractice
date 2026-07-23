@@ -61,14 +61,14 @@ export function RoomTypeCard({ roomType }: { roomType: RoomType }) {
         <div className="mt-auto pt-5">
           <p className="font-display text-sm font-bold text-ink">
             {formatMXN(roomType.baseHourlyPriceCents)}
-            <span className="font-sans text-xs font-normal text-stone"> /hora</span>
+            <span className="font-sans text-xs font-normal text-stone-deep"> /hora</span>
             {roomType.memberHourlyPriceCents != null && (
               <span className="ml-2 font-sans text-xs font-normal text-sage">
                 {formatMXN(roomType.memberHourlyPriceCents)} con membresía
               </span>
             )}
           </p>
-          <p className="mt-1 text-xs text-stone">
+          <p className="mt-1 text-xs text-stone-deep">
             Ideal para: {roomType.idealFor.join(" · ")}
           </p>
         </div>

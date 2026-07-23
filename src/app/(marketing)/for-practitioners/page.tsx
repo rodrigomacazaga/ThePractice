@@ -197,7 +197,7 @@ export default async function ForPractitionersPage() {
               <div className="flex items-center gap-2 border-b border-line pb-3">
                 <span className="h-2.5 w-2.5 rounded-full bg-line-strong" />
                 <span className="h-2.5 w-2.5 rounded-full bg-line-strong" />
-                <span className="ml-3 flex-1 rounded-md bg-paper px-3 py-1 font-mono text-[10px] text-stone">
+                <span className="ml-3 flex-1 rounded-md bg-paper px-3 py-1 font-mono text-[10px] text-stone-deep">
                   thepractice.mx/p/ana-garcia
                 </span>
               </div>

@@ -256,7 +256,7 @@ export default async function LaCeibaLandingPage() {
                 </ButtonLink>
               </TrackClick>
             </div>
-            <p className="mt-6 text-sm text-paper/40">
+            <p className="mt-6 text-sm text-paper/70">
               Aplicación gratuita · Cupo limitado por especialidad · Beneficios
               exclusivos de lanzamiento
             </p>
@@ -279,7 +279,7 @@ export default async function LaCeibaLandingPage() {
                 className="object-cover"
               />
             </div>
-            <p className="mt-4 text-center font-display text-[10px] font-semibold tracking-[0.25em] text-paper/40 uppercase">
+            <p className="mt-4 text-center font-display text-[10px] font-semibold tracking-[0.25em] text-paper/70 uppercase">
               The Practice La Ceiba · Talk Room
             </p>
           </div>
@@ -366,7 +366,7 @@ export default async function LaCeibaLandingPage() {
                 </Badge>
               ))}
             </div>
-            <p className="mt-7 max-w-lg text-xs leading-relaxed text-stone">
+            <p className="mt-7 max-w-lg text-xs leading-relaxed text-stone-deep">
               Una característica única de nuestra Founding Location. Cada sede
               de la red tendrá su propio carácter.
             </p>
@@ -509,7 +509,7 @@ export default async function LaCeibaLandingPage() {
               </TrackClick>
             </div>
 
-            <p className="mt-8 text-center text-xs text-stone">
+            <p className="mt-8 text-center text-xs text-stone-deep">
               Precios en MXN. Ver{" "}
               <Link href="/memberships" className="underline">
                 membresías regulares

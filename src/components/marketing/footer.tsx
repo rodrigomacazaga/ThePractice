@@ -28,17 +28,17 @@ export function Footer() {
         </div>
 
         <div className="mt-16 border-t border-paper/10 pt-8">
-          <p className="max-w-3xl text-xs leading-relaxed text-paper/40">
+          <p className="max-w-3xl text-xs leading-relaxed text-paper/70">
             The Practice provee espacios, tecnología y directorio. No presta
             servicios médicos, terapéuticos ni clínicos. Cada practitioner es
             responsable de sus servicios, credenciales, permisos y cumplimiento
             regulatorio.
           </p>
           <div className="mt-6 flex flex-wrap items-center justify-between gap-4">
-            <p className="font-display text-xs font-semibold tracking-widest text-paper/50 uppercase">
+            <p className="font-display text-xs font-semibold tracking-widest text-paper/70 uppercase">
               © {new Date().getFullYear()} The Practice · {site.domain}
             </p>
-            <p className="font-display text-xs font-semibold tracking-widest text-paper/50 uppercase">
+            <p className="font-display text-xs font-semibold tracking-widest text-paper/70 uppercase">
               Querétaro · México
             </p>
           </div>
@@ -57,7 +57,7 @@ function FooterColumn({
 }) {
   return (
     <div>
-      <h4 className="font-display text-[11px] font-semibold tracking-[0.2em] text-paper/40 uppercase">
+      <h4 className="font-display text-[11px] font-semibold tracking-[0.2em] text-paper/70 uppercase">
         {title}
       </h4>
       <ul className="mt-4 space-y-2.5">

@@ -330,7 +330,7 @@ export default async function MicrositePage({ params }: Props) {
                   </div>
                 ))}
               </div>
-              <p className="mt-4 text-xs text-stone">Los horarios se confirman al reservar.</p>
+              <p className="mt-4 text-xs text-stone-deep">Los horarios se confirman al reservar.</p>
             </div>
           )}
 
@@ -343,7 +343,7 @@ export default async function MicrositePage({ params }: Props) {
             />
           </div>
 
-          <p className="px-2 text-[11px] leading-relaxed text-stone">
+          <p className="px-2 text-[11px] leading-relaxed text-stone-deep">
             {profile.user.name} es un practitioner independiente. The Practice
             provee el espacio y la plataforma; los servicios profesionales son
             responsabilidad del practitioner.

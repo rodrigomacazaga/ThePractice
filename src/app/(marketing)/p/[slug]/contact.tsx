@@ -63,11 +63,11 @@ export function MicrositeContact({
       <h3 className="font-display text-base font-bold text-paper">
         {allowBooking ? "Solicita tu sesión" : `Escríbele a ${practitionerName.split(" ")[0]}`}
       </h3>
-      <p className="mt-1 text-xs text-paper/50">
+      <p className="mt-1 text-xs text-paper/70">
         Respuesta típica en menos de 24 horas.
       </p>
 
-      <div className="mt-5 space-y-4 [&_input]:border-paper/20 [&_input]:bg-paper/10 [&_input]:text-paper [&_input]:placeholder:text-paper/40 [&_label]:text-paper/70 [&_textarea]:border-paper/20 [&_textarea]:bg-paper/10 [&_textarea]:text-paper [&_textarea]:placeholder:text-paper/40">
+      <div className="mt-5 space-y-4 [&_input]:border-paper/20 [&_input]:bg-paper/10 [&_input]:text-paper [&_input]:placeholder:text-paper/70 [&_label]:text-paper/70 [&_textarea]:border-paper/20 [&_textarea]:bg-paper/10 [&_textarea]:text-paper [&_textarea]:placeholder:text-paper/70">
         <Field label="Nombre" error={errors.name?.message} htmlFor="m-name">
           <Input id="m-name" {...register("name")} />
         </Field>

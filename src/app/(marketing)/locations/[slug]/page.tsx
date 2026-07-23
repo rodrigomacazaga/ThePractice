@@ -164,7 +164,7 @@ export default async function LocationDetailPage({ params }: Props) {
                 </div>
                 <p className="mt-4 font-display text-sm font-bold">
                   {formatMXN(room.hourlyPriceCentsOverride ?? room.roomType.baseHourlyPriceCents)}
-                  <span className="font-sans text-xs font-normal text-stone"> /hora</span>
+                  <span className="font-sans text-xs font-normal text-stone-deep"> /hora</span>
                 </p>
               </div>
             ))}
