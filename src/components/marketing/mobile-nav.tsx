@@ -21,7 +21,12 @@ export function MobileNav() {
       </button>
 
       {open && (
-        <div className="absolute inset-x-0 top-full border-b border-line bg-paper/95 shadow-(--shadow-lift) backdrop-blur-xl">
+        // Fondo OPACO a propósito: el header ya aplica backdrop-filter, y un
+        // backdrop-filter anidado no puede desenfocar lo que hay detrás, así
+        // que cualquier transparencia deja transparentar el contenido (sobre
+        // el hero oscuro el menú se volvía ilegible). z-50 y el scroll propio
+        // lo mantienen visible y usable en pantallas cortas.
+        <div className="absolute inset-x-0 top-full z-50 max-h-[calc(100dvh-4rem)] overflow-y-auto border-b border-line bg-paper shadow-(--shadow-lift)">
           <nav className="container-page flex flex-col gap-1 py-4">
             {mainNav.map((item) => (
               <Link
