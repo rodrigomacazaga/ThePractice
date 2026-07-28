@@ -24,14 +24,30 @@ export function GateLoginForm({ className }: { className?: string }) {
     setLoading(true);
 
     const form = new FormData(e.currentTarget);
+    const username = String(form.get("username")).trim().toLowerCase();
+    // El provider de credenciales valida el usuario como email: sin "@" el
+    // login falla igual que con contraseña mala, así que se distingue aquí.
+    if (!username.includes("@")) {
+      setError("Escribe tu correo completo, por ejemplo admin@thepractice.mx.");
+      setLoading(false);
+      return;
+    }
+
     const res = await signIn("credentials", {
-      email: String(form.get("username")).trim().toLowerCase(),
+      email: username,
       password: String(form.get("password")),
       redirect: false,
     });
 
     if (res?.error) {
-      setError("Usuario o contraseña incorrectos.");
+      // Solo CredentialsSignin significa "datos incorrectos"; cualquier otro
+      // error (configuración, CSRF, red) merece su propio mensaje para no
+      // mandar al usuario a reintentar una contraseña que sí era correcta.
+      setError(
+        res.error === "CredentialsSignin"
+          ? "Usuario o contraseña incorrectos."
+          : `No se pudo iniciar sesión (${res.error}). Avisa al equipo con este código.`
+      );
       setLoading(false);
       return;
     }
@@ -41,14 +57,15 @@ export function GateLoginForm({ className }: { className?: string }) {
 
   return (
     <form onSubmit={onSubmit} className={cn("space-y-5", className)} noValidate>
-      <Field label="Usuario" htmlFor="username">
+      <Field label="Usuario (correo)" htmlFor="username">
         <Input
           id="username"
           name="username"
-          type="text"
+          type="email"
+          inputMode="email"
           autoComplete="username"
           required
-          placeholder="tu@email.com"
+          placeholder="admin@thepractice.mx"
         />
       </Field>
       <Field label="Contraseña" htmlFor="password">
