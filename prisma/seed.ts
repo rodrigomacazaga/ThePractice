@@ -25,8 +25,17 @@ const db = new PrismaClient();
 // Nunca hardcodear la contraseña: el repo es público. En local hay un
 // default cómodo; para producción SEED_PASSWORD es obligatoria.
 const PASSWORD = process.env.SEED_PASSWORD ?? "demo125";
-if (!process.env.SEED_PASSWORD && process.env.NODE_ENV === "production") {
-  throw new Error("Define SEED_PASSWORD para seedear producción");
+// El default solo es aceptable en local. En un entorno desplegado hay que
+// fallar en vez de escribir "demo125" en la base: NODE_ENV no basta como
+// señal porque los builds de Netlify NO lo ponen en "production" (ver
+// netlify.toml), así que también se comprueba la variable NETLIFY.
+if (
+  !process.env.SEED_PASSWORD &&
+  (process.env.NODE_ENV === "production" || process.env.NETLIFY === "true")
+) {
+  throw new Error(
+    "Define SEED_PASSWORD para seedear un entorno desplegado (no se usa el default)."
+  );
 }
 
 async function main() {
