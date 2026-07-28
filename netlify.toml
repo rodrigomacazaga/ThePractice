@@ -6,7 +6,10 @@
 # es el valor recomendado cuando se define un build command explícito.
 
 [build]
-  command = "npm run build"
+  # TEMPORAL: se añade db:seed una sola vez para sincronizar las contraseñas
+  # demo (SEED_PASSWORD) y el catálogo en la base de datos. Revertir a
+  # "npm run build" después de que este deploy quede en verde.
+  command = "npm run build && npm run db:seed"
   publish = ".next"
 
 # OJO: no fijar NODE_ENV=production aquí — haría que npm omita las

@@ -7,7 +7,9 @@
  *
  * Idempotente: usa upserts por claves únicas (email, code, slug).
  *
- * Credenciales demo (contraseña: ThePractice2026!):
+ * Credenciales demo (contraseña: SEED_PASSWORD; "demo125" por default en dev).
+ * Cada corrida del seed SINCRONIZA la contraseña de las cuentas demo, así que
+ * re-seedear con SEED_PASSWORD definido resetea sus contraseñas:
  *   superadmin@thepractice.mx  → SUPER_ADMIN
  *   admin@thepractice.mx       → ADMIN
  *   ana@thepractice.mx         → PRACTITIONER (Pro, aprobada)
@@ -469,7 +471,8 @@ async function main() {
   // ------------------------------------------------------------
   await db.user.upsert({
     where: { email: "superadmin@thepractice.mx" },
-    update: {},
+    // Las cuentas demo sincronizan su contraseña en cada seed (ver docstring).
+    update: { passwordHash },
     create: {
       email: "superadmin@thepractice.mx",
       name: "Dirección The Practice",
@@ -480,7 +483,7 @@ async function main() {
 
   const admin = await db.user.upsert({
     where: { email: "admin@thepractice.mx" },
-    update: {},
+    update: { passwordHash },
     create: {
       email: "admin@thepractice.mx",
       name: "Operación La Ceiba",
@@ -612,7 +615,7 @@ async function main() {
   for (const p of practitionersData) {
     const user = await db.user.upsert({
       where: { email: p.email },
-      update: {},
+      update: { passwordHash },
       create: {
         email: p.email,
         name: p.name,
@@ -776,7 +779,7 @@ async function main() {
   // ------------------------------------------------------------
   const clientUser = await db.user.upsert({
     where: { email: "cliente@ejemplo.mx" },
-    update: {},
+    update: { passwordHash },
     create: {
       email: "cliente@ejemplo.mx",
       name: "María Fernanda López",
@@ -1041,7 +1044,7 @@ async function main() {
 
   console.log("✅ Seed completo.");
   console.log("   Ubicaciones: La Ceiba (abierta), Juriquilla y Zibatá (próximamente)");
-  console.log("   Usuarios demo (contraseña: ThePractice2026!):");
+  console.log("   Usuarios demo (contraseña: SEED_PASSWORD / demo125):");
   console.log("   - superadmin@thepractice.mx / admin@thepractice.mx");
   console.log("   - ana@thepractice.mx (Pro) / roberto@thepractice.mx (Premium)");
   console.log("   - sofia@thepractice.mx (Flex) / diego@thepractice.mx (pendiente)");
