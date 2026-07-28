@@ -6,12 +6,11 @@
 # es el valor recomendado cuando se define un build command explícito.
 
 [build]
-  # TEMPORAL: db:seed sincroniza las contraseñas demo (SEED_PASSWORD) y el
-  # catálogo en la base de datos, y verify-login comprueba contra la base que
-  # la cuenta admin autentica con esa contraseña — si no, el build falla y el
-  # deploy en rojo lo evidencia. Revertir a "npm run build" en cuanto se
-  # confirme el acceso.
-  command = "npm run build && npm run db:seed && node scripts/verify-login.mjs"
+  # El seed NO corre en cada deploy: se ejecuta a mano cuando hace falta
+  # sincronizar catálogo o contraseñas demo (`npm run db:seed`, con
+  # SEED_PASSWORD definida). scripts/verify-login.mjs queda disponible para
+  # comprobar credenciales contra la base sin exponer nada.
+  command = "npm run build"
   publish = ".next"
 
 # OJO: no fijar NODE_ENV=production aquí — haría que npm omita las
