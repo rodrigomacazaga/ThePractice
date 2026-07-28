@@ -312,7 +312,7 @@ export default async function ThePracticePage() {
             <SectionHeading
               eyebrow="Los espacios"
               title="Un espacio para cada forma de ejercer."
-              description="Las salas son solo una parte de The Practice — pero están pensadas al detalle. Seis tipos de espacio para terapia, consulta, sesiones premium, masaje, sesiones online y talleres."
+              description="Las salas son solo una parte de The Practice — pero están pensadas al detalle. Siete tipos de espacio para terapia, consulta, sesiones premium, masaje, movimiento, sesiones online y talleres."
             />
             <ButtonLink href="/rooms" variant="outline">
               Ver todos los espacios

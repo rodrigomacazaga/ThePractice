@@ -36,7 +36,7 @@ export default function ContactPage() {
             <Instagram className="h-4 w-4 text-clay" /> @thepractice.mx
           </a>
           <p className="flex items-center gap-3 text-ink-mute">
-            <MapPin className="h-4 w-4 text-clay" /> Plaza La Ceiba, Querétaro, México
+            <MapPin className="h-4 w-4 text-clay" /> Lomas de Campanario Norte, Querétaro, México
           </p>
         </div>
       </div>

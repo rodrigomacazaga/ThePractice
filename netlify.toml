@@ -6,6 +6,10 @@
 # es el valor recomendado cuando se define un build command explícito.
 
 [build]
+  # El seed NO corre en cada deploy: se ejecuta a mano cuando hace falta
+  # sincronizar catálogo o contraseñas demo (`npm run db:seed`, con
+  # SEED_PASSWORD definida). scripts/verify-login.mjs queda disponible para
+  # comprobar credenciales contra la base sin exponer nada.
   command = "npm run build"
   publish = ".next"
 

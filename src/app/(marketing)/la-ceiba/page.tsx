@@ -31,7 +31,7 @@ export const dynamic = "force-dynamic";
 
 const TITLE = "Consultorios y espacios privados por hora en Querétaro | The Practice La Ceiba";
 const DESCRIPTION =
-  "Espacios privados y equipados para psicólogos, terapeutas, nutriólogos, coaches y profesionales independientes en Plaza La Ceiba, Querétaro. Conoce las membresías Founder.";
+  "Espacios privados y equipados para psicólogos, terapeutas, nutriólogos, coaches y profesionales independientes en Lomas de Campanario Norte, Querétaro. Conoce las membresías Founder.";
 
 export const metadata: Metadata = {
   title: { absolute: TITLE },
@@ -232,16 +232,17 @@ export default async function LaCeibaLandingPage() {
               </Badge>
               <Badge variant="outline" size="md" className="border-paper/25 text-paper/70">
                 <MapPin className="h-3 w-3" />
-                Plaza La Ceiba · Querétaro
+                Lomas de Campanario Norte · Querétaro
               </Badge>
             </div>
             <h1 className="mt-6 font-display text-4xl font-bold tracking-tight text-balance sm:text-5xl lg:text-6xl">
               Estrena tu espacio profesional sin pagar renta fija.
             </h1>
             <p className="mt-6 max-w-xl text-lg leading-relaxed text-paper/65">
-              Espacios privados, equipados y listos para atender en Plaza La
-              Ceiba. Pagas por hora o con membresía — con recepción,
-              reservaciones digitales, micrositio y comunidad incluidos.
+              Espacios privados, equipados y listos para atender en Lomas de
+              Campanario Norte, Querétaro. Pagas por hora o con membresía —
+              con recepción, reservaciones digitales, micrositio y comunidad
+              incluidos.
             </p>
             <div className="mt-9 flex flex-wrap gap-3">
               <TrackClick event="cta_click" params={{ placement: "hero", cta: "aplicar-founder" }}>
@@ -328,7 +329,7 @@ export default async function LaCeibaLandingPage() {
           <SectionHeading
             eyebrow="Los espacios"
             title="Un espacio para cada tipo de sesión."
-            description="Salas para terapia individual, parejas, consulta profesional, nutrición, masaje o wellness, sesiones online y talleres o sesiones grupales."
+            description="Salas para terapia individual, parejas, consulta profesional, nutrición, masaje o wellness, movimiento, sesiones online y talleres o sesiones grupales."
           />
           <div className="mt-12 grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
             {roomTypes.map((rt) => (

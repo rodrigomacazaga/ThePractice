@@ -7,7 +7,9 @@
  *
  * Idempotente: usa upserts por claves únicas (email, code, slug).
  *
- * Credenciales demo (contraseña: ThePractice2026!):
+ * Credenciales demo (contraseña: SEED_PASSWORD; "demo125" por default en dev).
+ * Cada corrida del seed SINCRONIZA la contraseña de las cuentas demo, así que
+ * re-seedear con SEED_PASSWORD definido resetea sus contraseñas:
  *   superadmin@thepractice.mx  → SUPER_ADMIN
  *   admin@thepractice.mx       → ADMIN
  *   ana@thepractice.mx         → PRACTITIONER (Pro, aprobada)
@@ -23,8 +25,17 @@ const db = new PrismaClient();
 // Nunca hardcodear la contraseña: el repo es público. En local hay un
 // default cómodo; para producción SEED_PASSWORD es obligatoria.
 const PASSWORD = process.env.SEED_PASSWORD ?? "demo125";
-if (!process.env.SEED_PASSWORD && process.env.NODE_ENV === "production") {
-  throw new Error("Define SEED_PASSWORD para seedear producción");
+// El default solo es aceptable en local. En un entorno desplegado hay que
+// fallar en vez de escribir "demo125" en la base: NODE_ENV no basta como
+// señal porque los builds de Netlify NO lo ponen en "production" (ver
+// netlify.toml), así que también se comprueba la variable NETLIFY.
+if (
+  !process.env.SEED_PASSWORD &&
+  (process.env.NODE_ENV === "production" || process.env.NETLIFY === "true")
+) {
+  throw new Error(
+    "Define SEED_PASSWORD para seedear un entorno desplegado (no se usa el default)."
+  );
 }
 
 async function main() {
@@ -43,7 +54,7 @@ async function main() {
     "Acceso con código",
     "Limpieza entre sesiones",
     "Aire acondicionado",
-    "Seguridad de plaza",
+    "Seguridad",
   ];
   const laCeiba = await db.location.upsert({
     where: { slug: "la-ceiba" },
@@ -51,7 +62,7 @@ async function main() {
     update: {
       amenities: laCeibaAmenities,
       description:
-        "Nuestra Founding Location: siete salas privadas dentro de Plaza La Ceiba, con The Members Lounge, estacionamiento, seguridad y un área común serena para recibir a tus clientes.",
+        "Nuestra Founding Location: salas privadas en la zona de Lomas de Campanario Norte, Querétaro, con The Members Lounge, estacionamiento, seguridad y un área común serena para recibir a tus clientes.",
     },
     create: {
       slug: "la-ceiba",
@@ -59,9 +70,9 @@ async function main() {
       shortName: "La Ceiba",
       city: "Querétaro",
       state: "Querétaro",
-      address: "Plaza La Ceiba, Av. Principal 100, Local 12",
+      address: "Lomas de Campanario Norte, Querétaro",
       description:
-        "Nuestra Founding Location: siete salas privadas dentro de Plaza La Ceiba, con The Members Lounge, estacionamiento, seguridad y un área común serena para recibir a tus clientes.",
+        "Nuestra Founding Location: salas privadas en la zona de Lomas de Campanario Norte, Querétaro, con The Members Lounge, estacionamiento, seguridad y un área común serena para recibir a tus clientes.",
       status: "OPEN",
       timezone: "America/Mexico_City",
       amenities: laCeibaAmenities,
@@ -220,16 +231,40 @@ async function main() {
     },
   });
 
-  // La plaza ya cuenta con estudios de yoga/pilates/movimiento, así que el
-  // concepto Movement se retira: si una base de datos ya lo tenía seedeado,
-  // se desactiva (no se borra, por si tiene reservas históricas). "family"
-  // fue un reemplazo provisional que nunca llegó a main; se desactiva igual.
+  // Movement regresa al catálogo: en la nueva ubicación (zona Lomas de
+  // Campanario Norte) ya no compite con los estudios de la antigua plaza.
+  // El upsert reactiva el tipo en bases donde se había retirado.
+  const movementType = await db.roomType.upsert({
+    where: { locationId_code: { locationId: laCeiba.id, code: "movement" } },
+    update: { active: true },
+    create: {
+      locationId: laCeiba.id,
+      code: "movement",
+      name: "Movement Studio",
+      description:
+        "Para barre, yoga, pilates mat y clases de movimiento en grupos pequeños. Piso de madera, espejo de pared completa y barra de barre.",
+      creditsPerHour: 2,
+      baseHourlyPriceCents: 80000,
+      memberHourlyPriceCents: 70000,
+      capacity: 8,
+      idealFor: ["Barre", "Yoga", "Pilates", "Movimiento"],
+      features: ["Piso de madera", "Espejo de pared completa", "Barra de barre", "Tapetes incluidos"],
+      sort: 6,
+    },
+  });
+  await db.room.updateMany({
+    where: { locationId: laCeiba.id, slug: "movement-01" },
+    data: { active: true },
+  });
+
+  // "family" fue un reemplazo provisional que nunca operó; se desactiva si
+  // alguna base lo llegó a seedear.
   await db.roomType.updateMany({
-    where: { locationId: laCeiba.id, code: { in: ["movement", "family"] } },
+    where: { locationId: laCeiba.id, code: "family" },
     data: { active: false },
   });
   await db.room.updateMany({
-    where: { locationId: laCeiba.id, slug: { in: ["movement-01", "family-01"] } },
+    where: { locationId: laCeiba.id, slug: "family-01" },
     data: { active: false },
   });
 
@@ -246,6 +281,7 @@ async function main() {
     { slug: "studio-01", name: "Studio", typeId: studioType.id, description: "El espacio para talleres y grupos: proyector, pizarrón y mesa modular para 10.", amenities: ["Proyector", "Pizarrón", "Mesa modular"] },
     { slug: "restore-01", name: "Restore 01", typeId: restoreType.id, description: "Dos reposets reclinables, luz tenue y silencio. Para masaje y sesiones de descanso profundo.", amenities: ["2 reposets", "Toallas", "Luz regulable"] },
     { slug: "online-01", name: "Online 01", typeId: onlineType.id, description: "Cabina silenciosa con micrófono, luz de video y fondo cuidado. Para sesiones online, cursos y grabación de contenido.", amenities: ["Micrófono", "Luz de video", "Fondo profesional"] },
+    { slug: "movement-01", name: "Movement 01", typeId: movementType.id, description: "Piso de madera cálida, espejo de pared completa y barra de barre. Para clases de movimiento en grupos pequeños.", amenities: ["Espejo completo", "Barra de barre", "Tapetes"] },
   ];
 
   const rooms: Record<string, { id: string }> = {};
@@ -444,7 +480,8 @@ async function main() {
   // ------------------------------------------------------------
   await db.user.upsert({
     where: { email: "superadmin@thepractice.mx" },
-    update: {},
+    // Las cuentas demo sincronizan su contraseña en cada seed (ver docstring).
+    update: { passwordHash },
     create: {
       email: "superadmin@thepractice.mx",
       name: "Dirección The Practice",
@@ -455,7 +492,7 @@ async function main() {
 
   const admin = await db.user.upsert({
     where: { email: "admin@thepractice.mx" },
-    update: {},
+    update: { passwordHash },
     create: {
       email: "admin@thepractice.mx",
       name: "Operación La Ceiba",
@@ -587,7 +624,7 @@ async function main() {
   for (const p of practitionersData) {
     const user = await db.user.upsert({
       where: { email: p.email },
-      update: {},
+      update: { passwordHash },
       create: {
         email: p.email,
         name: p.name,
@@ -751,7 +788,7 @@ async function main() {
   // ------------------------------------------------------------
   const clientUser = await db.user.upsert({
     where: { email: "cliente@ejemplo.mx" },
-    update: {},
+    update: { passwordHash },
     create: {
       email: "cliente@ejemplo.mx",
       name: "María Fernanda López",
@@ -1016,7 +1053,7 @@ async function main() {
 
   console.log("✅ Seed completo.");
   console.log("   Ubicaciones: La Ceiba (abierta), Juriquilla y Zibatá (próximamente)");
-  console.log("   Usuarios demo (contraseña: ThePractice2026!):");
+  console.log("   Usuarios demo (contraseña: SEED_PASSWORD / demo125):");
   console.log("   - superadmin@thepractice.mx / admin@thepractice.mx");
   console.log("   - ana@thepractice.mx (Pro) / roberto@thepractice.mx (Premium)");
   console.log("   - sofia@thepractice.mx (Flex) / diego@thepractice.mx (pendiente)");
