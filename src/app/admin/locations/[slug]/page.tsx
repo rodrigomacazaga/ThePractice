@@ -38,6 +38,7 @@ import {
   sortRecommendations,
 } from "@/lib/metrics";
 import { RoomTypesSection } from "./room-types-section";
+import { EmployeesSection } from "./employees-section";
 import { RecommendationList } from "../recommendation-list";
 import { monthToDate } from "@/lib/metrics/periods";
 
@@ -122,12 +123,6 @@ export default async function LocationDashboardPage({
     ...recommendMembershipFit(usage),
     ...demandRecs,
   ]);
-
-  const docsPorVencer = employees.flatMap((e) =>
-    e.documents.filter(
-      (d) => d.expiresAt != null && d.expiresAt <= new Date(Date.now() + 60 * 86_400_000)
-    ).map((d) => ({ empleado: e.name, doc: d.name, expiresAt: d.expiresAt! }))
-  );
 
   const maxHeat = heatmap.reduce((m, c) => Math.max(m, c.horas), 0);
   const dias = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
@@ -396,51 +391,7 @@ export default async function LocationDashboardPage({
         </div>
       </section>
 
-      {/* EQUIPO */}
-      <section className="mt-10">
-        <h2 className="eyebrow">Equipo de la sede</h2>
-        {docsPorVencer.length > 0 && (
-          <div className="mt-3 rounded-2xl bg-amber-soft px-4 py-3 text-sm font-medium text-amber-warm">
-            {docsPorVencer.length} documento{docsPorVencer.length === 1 ? "" : "s"} por vencer en los
-            próximos 60 días: {docsPorVencer.slice(0, 3).map((d) => `${d.doc} (${d.empleado})`).join(", ")}
-            {docsPorVencer.length > 3 ? "…" : ""}
-          </div>
-        )}
-        {employees.length === 0 ? (
-          <EmptyState
-            icon={Building}
-            title="Sin empleados dados de alta"
-            description="Registra al equipo de esta sede para llevar su nómina y documentación."
-          />
-        ) : (
-          <Card className="mt-4 overflow-x-auto">
-            <Table>
-              <THead>
-                <TR>
-                  <TH>Nombre</TH>
-                  <TH>Puesto</TH>
-                  <TH>Contrato</TH>
-                  <TH>Sueldo mensual</TH>
-                  <TH>Documentos</TH>
-                </TR>
-              </THead>
-              <TBody>
-                {employees.map((e) => (
-                  <TR key={e.id}>
-                    <TD className="font-display font-semibold">{e.name}</TD>
-                    <TD className="text-stone-deep">{e.position}</TD>
-                    <TD>
-                      <Badge variant="outline">{e.employmentType}</Badge>
-                    </TD>
-                    <TD>{e.monthlySalaryCents != null ? formatMXN(e.monthlySalaryCents) : "—"}</TD>
-                    <TD>{e.documents.length}</TD>
-                  </TR>
-                ))}
-              </TBody>
-            </Table>
-          </Card>
-        )}
-      </section>
+      <EmployeesSection locationId={location.id} employees={employees} />
 
       {/* TIPOS DE SALA — inventario físico de esta sede */}
       <section className="mt-4">

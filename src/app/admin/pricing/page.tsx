@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Field, Input, Select, Textarea } from "@/components/ui/form";
 import { Modal } from "@/components/ui/modal";
 import { ActionForm, ActionButton } from "@/components/dashboard/action-form";
+import { RateWindowsSection, PlanOverridesSection } from "./flexibility-sections";
 import {
   deletePlan,
   deleteHourPackage,
@@ -235,7 +236,7 @@ export const dynamic = "force-dynamic";
 export default async function AdminCatalogPage() {
   await requireAdmin();
 
-  const [plans, locations, packages, addOns] = await Promise.all([
+  const [plans, locations, packages, addOns, rateWindows, planOverrides] = await Promise.all([
     db.membershipPlan.findMany({ orderBy: { sort: "asc" } }),
     db.location.findMany({
       orderBy: { sort: "asc" },
@@ -243,6 +244,15 @@ export default async function AdminCatalogPage() {
     }),
     db.hourPackage.findMany({ orderBy: { sort: "asc" } }),
     db.addOn.findMany({ orderBy: { sort: "asc" } }),
+    db.rateWindow.findMany({
+      where: { active: true },
+      include: { location: { select: { shortName: true } }, roomType: { select: { name: true } } },
+      orderBy: [{ locationId: "asc" }, { startHour: "asc" }],
+    }),
+    db.membershipPlanLocationPrice.findMany({
+      where: { active: true },
+      include: { plan: { select: { name: true } }, location: { select: { shortName: true } } },
+    }),
   ]);
 
   return (
@@ -373,6 +383,10 @@ export default async function AdminCatalogPage() {
           </CardContent>
         </Card>
       </div>
+
+      <RateWindowsSection locations={locations} windows={rateWindows} />
+
+      <PlanOverridesSection plans={plans} locations={locations} overrides={planOverrides} />
 
       {/* Los tipos de sala son inventario fisico de cada sede: se administran
           en la vista de la ubicacion, no en el catalogo comercial. */}

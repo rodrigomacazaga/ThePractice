@@ -1226,3 +1226,368 @@ export async function runJobAction(job: string) {
   revalidatePath("/admin/settings");
   return { ok: true, message: `${result.processed} procesados` };
 }
+
+// ============================================================
+// Costos, equipo y flexibilidad de precios
+// Sin captura, los modelos nuevos no sirven de nada: estas acciones son
+// lo que permite que el margen y las alertas dejen de estar vacíos.
+// ============================================================
+
+const expenseSchema = z.object({
+  expenseId: z.string().optional(),
+  locationId: z.string().optional(), // vacío = gasto corporativo
+  category: z.enum([
+    "RENT",
+    "UTILITIES",
+    "PAYROLL",
+    "MAINTENANCE",
+    "CLEANING",
+    "SUPPLIES",
+    "MARKETING",
+    "SOFTWARE",
+    "INSURANCE",
+    "TAXES",
+    "OTHER",
+  ]),
+  recurrence: z.enum(["ONE_TIME", "MONTHLY", "YEARLY"]),
+  concept: z.string().min(2, "Describe el gasto").max(160),
+  amount: z.coerce.number().min(0).max(10_000_000),
+  vendor: z.string().max(160).optional(),
+  incurredAt: z.string().optional(),
+  notes: z.string().max(1000).optional(),
+});
+
+export async function upsertExpense(formData: FormData) {
+  const session = await requireAdmin();
+  const parsed = expenseSchema.safeParse({
+    expenseId: formData.get("expenseId") || undefined,
+    locationId: formData.get("locationId") || undefined,
+    category: formData.get("category"),
+    recurrence: formData.get("recurrence"),
+    concept: formData.get("concept"),
+    amount: formData.get("amount"),
+    vendor: formData.get("vendor") || undefined,
+    incurredAt: formData.get("incurredAt") || undefined,
+    notes: formData.get("notes") || undefined,
+  });
+  if (!parsed.success) return { error: firstError(parsed.error) };
+  const d = parsed.data;
+
+  const data = {
+    locationId: d.locationId ?? null,
+    category: d.category,
+    recurrence: d.recurrence,
+    concept: d.concept,
+    amountCents: Math.round(d.amount * 100),
+    vendor: d.vendor ?? null,
+    // Los gastos únicos necesitan fecha para caer en el periodo correcto.
+    incurredAt:
+      d.recurrence === "ONE_TIME" ? (d.incurredAt ? new Date(d.incurredAt) : new Date()) : null,
+    notes: d.notes ?? null,
+  };
+
+  const expense = d.expenseId
+    ? await db.expense.update({ where: { id: d.expenseId }, data })
+    : await db.expense.create({ data });
+
+  await audit({
+    actorId: session.user.id,
+    action: d.expenseId ? "expense.updated" : "expense.created",
+    entity: "Expense",
+    entityId: expense.id,
+    data: { concept: d.concept, amountCents: data.amountCents },
+  });
+  revalidatePath("/admin/overview");
+  revalidatePath("/admin/costs");
+  if (d.locationId) revalidatePath("/admin/locations");
+  return { ok: true };
+}
+
+export async function deleteExpense(expenseId: string) {
+  const session = await requireAdmin();
+  await db.expense.delete({ where: { id: expenseId } });
+  await audit({
+    actorId: session.user.id,
+    action: "expense.deleted",
+    entity: "Expense",
+    entityId: expenseId,
+  });
+  revalidatePath("/admin/costs");
+  revalidatePath("/admin/overview");
+  return { ok: true };
+}
+
+const employeeSchema = z.object({
+  employeeId: z.string().optional(),
+  locationId: z.string().min(1, "Elige la ubicación"),
+  name: z.string().min(2, "Escribe el nombre").max(120),
+  position: z.string().min(2, "Escribe el puesto").max(120),
+  email: z.string().email("Email inválido").optional().or(z.literal("")),
+  phone: z.string().max(30).optional(),
+  employmentType: z.enum(["FULL_TIME", "PART_TIME", "CONTRACTOR"]),
+  status: z.enum(["ACTIVE", "ON_LEAVE", "TERMINATED"]),
+  monthlySalary: z.coerce.number().min(0).max(10_000_000).optional(),
+  startedAt: z.string().min(1, "Indica la fecha de ingreso"),
+  notes: z.string().max(1000).optional(),
+});
+
+export async function upsertEmployee(formData: FormData) {
+  const session = await requireAdmin();
+  const parsed = employeeSchema.safeParse({
+    employeeId: formData.get("employeeId") || undefined,
+    locationId: formData.get("locationId"),
+    name: formData.get("name"),
+    position: formData.get("position"),
+    email: formData.get("email") || undefined,
+    phone: formData.get("phone") || undefined,
+    employmentType: formData.get("employmentType"),
+    status: formData.get("status"),
+    monthlySalary: formData.get("monthlySalary") || undefined,
+    startedAt: formData.get("startedAt"),
+    notes: formData.get("notes") || undefined,
+  });
+  if (!parsed.success) return { error: firstError(parsed.error) };
+  const d = parsed.data;
+
+  const data = {
+    locationId: d.locationId,
+    name: d.name,
+    position: d.position,
+    email: d.email || null,
+    phone: d.phone ?? null,
+    employmentType: d.employmentType,
+    status: d.status,
+    monthlySalaryCents: d.monthlySalary != null ? Math.round(d.monthlySalary * 100) : null,
+    startedAt: new Date(d.startedAt),
+    endedAt: d.status === "TERMINATED" ? new Date() : null,
+    notes: d.notes ?? null,
+  };
+
+  const employee = d.employeeId
+    ? await db.employee.update({ where: { id: d.employeeId }, data })
+    : await db.employee.create({ data });
+
+  await audit({
+    actorId: session.user.id,
+    action: d.employeeId ? "employee.updated" : "employee.created",
+    entity: "Employee",
+    entityId: employee.id,
+    data: { name: d.name, position: d.position },
+  });
+  revalidatePath("/admin/locations");
+  return { ok: true };
+}
+
+export async function deleteEmployee(employeeId: string) {
+  const session = await requireAdmin();
+  await db.employee.delete({ where: { id: employeeId } });
+  await audit({
+    actorId: session.user.id,
+    action: "employee.deleted",
+    entity: "Employee",
+    entityId: employeeId,
+  });
+  revalidatePath("/admin/locations");
+  return { ok: true };
+}
+
+const employeeDocSchema = z.object({
+  employeeId: z.string().min(1),
+  type: z.enum([
+    "CONTRACT",
+    "ID",
+    "TAX_ID",
+    "SOCIAL_SECURITY",
+    "BANK_DETAILS",
+    "MEDICAL_CERT",
+    "TRAINING",
+    "NDA",
+    "OTHER",
+  ]),
+  name: z.string().min(2, "Nombra el documento").max(160),
+  url: z.string().url("La liga debe ser una URL válida"),
+  expiresAt: z.string().optional(),
+});
+
+export async function upsertEmployeeDocument(formData: FormData) {
+  const session = await requireAdmin();
+  const parsed = employeeDocSchema.safeParse({
+    employeeId: formData.get("employeeId"),
+    type: formData.get("type"),
+    name: formData.get("name"),
+    url: formData.get("url"),
+    expiresAt: formData.get("expiresAt") || undefined,
+  });
+  if (!parsed.success) return { error: firstError(parsed.error) };
+  const d = parsed.data;
+
+  const doc = await db.employeeDocument.create({
+    data: {
+      employeeId: d.employeeId,
+      type: d.type,
+      name: d.name,
+      url: d.url,
+      expiresAt: d.expiresAt ? new Date(d.expiresAt) : null,
+    },
+  });
+  await audit({
+    actorId: session.user.id,
+    action: "employee_document.created",
+    entity: "EmployeeDocument",
+    entityId: doc.id,
+  });
+  revalidatePath("/admin/locations");
+  return { ok: true };
+}
+
+export async function deleteEmployeeDocument(documentId: string) {
+  const session = await requireAdmin();
+  await db.employeeDocument.delete({ where: { id: documentId } });
+  await audit({
+    actorId: session.user.id,
+    action: "employee_document.deleted",
+    entity: "EmployeeDocument",
+    entityId: documentId,
+  });
+  revalidatePath("/admin/locations");
+  return { ok: true };
+}
+
+const rateWindowSchema = z
+  .object({
+    rateWindowId: z.string().optional(),
+    locationId: z.string().min(1, "Elige la ubicación"),
+    roomTypeId: z.string().optional(), // vacío = todos los tipos de la sede
+    kind: z.enum(["PRIME", "OFF_PEAK"]),
+    label: z.string().min(2, "Nombra la franja").max(80),
+    weekdays: z.array(z.coerce.number().int().min(0).max(6)).min(1, "Elige al menos un día"),
+    startHour: z.coerce.number().int().min(0).max(23),
+    endHour: z.coerce.number().int().min(1).max(24),
+    adjustPct: z.coerce.number().min(-90).max(300).optional(),
+    fixedPrice: z.coerce.number().min(0).max(100000).optional(),
+  })
+  .refine((d) => d.endHour > d.startHour, {
+    message: "La hora de fin debe ser mayor que la de inicio",
+    path: ["endHour"],
+  })
+  .refine((d) => d.adjustPct != null || d.fixedPrice != null, {
+    message: "Define un ajuste porcentual o un precio fijo",
+    path: ["adjustPct"],
+  });
+
+export async function upsertRateWindow(formData: FormData) {
+  const session = await requireAdmin();
+  const parsed = rateWindowSchema.safeParse({
+    rateWindowId: formData.get("rateWindowId") || undefined,
+    locationId: formData.get("locationId"),
+    roomTypeId: formData.get("roomTypeId") || undefined,
+    kind: formData.get("kind"),
+    label: formData.get("label"),
+    weekdays: formData.getAll("weekdays"),
+    startHour: formData.get("startHour"),
+    endHour: formData.get("endHour"),
+    adjustPct: formData.get("adjustPct") || undefined,
+    fixedPrice: formData.get("fixedPrice") || undefined,
+  });
+  if (!parsed.success) return { error: firstError(parsed.error) };
+  const d = parsed.data;
+
+  const data = {
+    locationId: d.locationId,
+    roomTypeId: d.roomTypeId ?? null,
+    kind: d.kind,
+    label: d.label,
+    weekdays: d.weekdays,
+    startHour: d.startHour,
+    endHour: d.endHour,
+    // El ajuste se guarda en basis points: +20% → 12000.
+    multiplierBps: d.adjustPct != null ? Math.round((100 + d.adjustPct) * 100) : null,
+    fixedPriceCents: d.fixedPrice != null ? Math.round(d.fixedPrice * 100) : null,
+  };
+
+  const window = d.rateWindowId
+    ? await db.rateWindow.update({ where: { id: d.rateWindowId }, data })
+    : await db.rateWindow.create({ data });
+
+  await audit({
+    actorId: session.user.id,
+    action: d.rateWindowId ? "rate_window.updated" : "rate_window.created",
+    entity: "RateWindow",
+    entityId: window.id,
+    data: { label: d.label, kind: d.kind },
+  });
+  revalidatePath("/admin/pricing");
+  revalidatePath("/admin/locations");
+  return { ok: true };
+}
+
+export async function deleteRateWindow(rateWindowId: string) {
+  const session = await requireAdmin();
+  await db.rateWindow.delete({ where: { id: rateWindowId } });
+  await audit({
+    actorId: session.user.id,
+    action: "rate_window.deleted",
+    entity: "RateWindow",
+    entityId: rateWindowId,
+  });
+  revalidatePath("/admin/pricing");
+  return { ok: true };
+}
+
+const planLocationPriceSchema = z.object({
+  planId: z.string().min(1),
+  locationId: z.string().min(1, "Elige la ubicación"),
+  monthlyPrice: z.coerce.number().min(0).max(1_000_000),
+  founderPrice: z.coerce.number().min(0).max(1_000_000).optional(),
+  includedCredits: z.coerce.number().min(0).max(500).optional(),
+});
+
+/** Precio de un plan en una sede concreta, sin duplicar el catálogo. */
+export async function upsertPlanLocationPrice(formData: FormData) {
+  const session = await requireAdmin();
+  const parsed = planLocationPriceSchema.safeParse({
+    planId: formData.get("planId"),
+    locationId: formData.get("locationId"),
+    monthlyPrice: formData.get("monthlyPrice"),
+    founderPrice: formData.get("founderPrice") || undefined,
+    includedCredits: formData.get("includedCredits") || undefined,
+  });
+  if (!parsed.success) return { error: firstError(parsed.error) };
+  const d = parsed.data;
+
+  const data = {
+    monthlyPriceCents: Math.round(d.monthlyPrice * 100),
+    founderPriceCents: d.founderPrice != null ? Math.round(d.founderPrice * 100) : null,
+    includedCredits: d.includedCredits ?? null,
+  };
+
+  const row = await db.membershipPlanLocationPrice.upsert({
+    where: { planId_locationId: { planId: d.planId, locationId: d.locationId } },
+    update: data,
+    create: { planId: d.planId, locationId: d.locationId, ...data },
+  });
+
+  await audit({
+    actorId: session.user.id,
+    action: "plan_location_price.upserted",
+    entity: "MembershipPlanLocationPrice",
+    entityId: row.id,
+    data,
+  });
+  revalidatePath("/admin/pricing");
+  revalidatePath("/memberships");
+  return { ok: true };
+}
+
+export async function deletePlanLocationPrice(id: string) {
+  const session = await requireAdmin();
+  await db.membershipPlanLocationPrice.delete({ where: { id } });
+  await audit({
+    actorId: session.user.id,
+    action: "plan_location_price.deleted",
+    entity: "MembershipPlanLocationPrice",
+    entityId: id,
+  });
+  revalidatePath("/admin/pricing");
+  return { ok: true };
+}
