@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
   title: "The Practice Network",
   description:
-    "The Practice nació para ser una red de espacios para profesionales independientes. La Ceiba es nuestra Founding Location en Querétaro; Juriquilla y Centro Sur vienen en camino.",
+    "The Practice nació para ser una red de espacios para profesionales independientes: una sede fundadora y las que vienen en camino.",
 };
 
 export default async function LocationsPage() {
@@ -41,7 +41,7 @@ export default async function LocationsPage() {
               key={location.id}
               location={location}
               roomCount={location._count.rooms}
-              founding={location.slug === "la-ceiba"}
+              founding={location.isFounding}
             />
           ))}
         </div>

@@ -45,7 +45,7 @@ async function main() {
   // ------------------------------------------------------------
   // Ubicaciones
   // ------------------------------------------------------------
-  const laCeibaAmenities = [
+  const mainAmenities = [
     "The Members Lounge (150 m²)",
     "Estacionamiento",
     "WiFi de alta velocidad",
@@ -56,26 +56,26 @@ async function main() {
     "Aire acondicionado",
     "Seguridad",
   ];
-  const laCeiba = await db.location.upsert({
+  const mainLocation = await db.location.upsert({
     where: { slug: "la-ceiba" },
     // Sincroniza amenities y descripción en DBs existentes (sin tocar status/precios).
     update: {
-      amenities: laCeibaAmenities,
+      amenities: mainAmenities,
       description:
-        "Nuestra Founding Location: salas privadas en la zona de Lomas de Campanario Norte, Querétaro, con The Members Lounge, estacionamiento, seguridad y un área común serena para recibir a tus clientes.",
+        "Nuestra Founding Location: salas privadas con lounge de miembros, estacionamiento, seguridad y un área común serena para recibir a tus clientes.",
     },
     create: {
       slug: "la-ceiba",
-      name: "The Practice La Ceiba",
-      shortName: "La Ceiba",
+      name: "The Practice Querétaro",
+      shortName: "Querétaro",
       city: "Querétaro",
       state: "Querétaro",
-      address: "Lomas de Campanario Norte, Querétaro",
+      address: "Querétaro",
       description:
-        "Nuestra Founding Location: salas privadas en la zona de Lomas de Campanario Norte, Querétaro, con The Members Lounge, estacionamiento, seguridad y un área común serena para recibir a tus clientes.",
+        "Nuestra Founding Location: salas privadas con lounge de miembros, estacionamiento, seguridad y un área común serena para recibir a tus clientes.",
       status: "OPEN",
       timezone: "America/Mexico_City",
-      amenities: laCeibaAmenities,
+      amenities: mainAmenities,
       openingHour: 7,
       closingHour: 22,
       sort: 0,
@@ -118,10 +118,10 @@ async function main() {
   // Tipos de sala
   // ------------------------------------------------------------
   const talkType = await db.roomType.upsert({
-    where: { locationId_code: { locationId: laCeiba.id, code: "talk" } },
+    where: { locationId_code: { locationId: mainLocation.id, code: "talk" } },
     update: {},
     create: {
-      locationId: laCeiba.id,
+      locationId: mainLocation.id,
       code: "talk",
       name: "Talk Room",
       description:
@@ -137,10 +137,10 @@ async function main() {
   });
 
   const consultType = await db.roomType.upsert({
-    where: { locationId_code: { locationId: laCeiba.id, code: "consult" } },
+    where: { locationId_code: { locationId: mainLocation.id, code: "consult" } },
     update: {},
     create: {
-      locationId: laCeiba.id,
+      locationId: mainLocation.id,
       code: "consult",
       name: "Consult Room",
       description:
@@ -156,10 +156,10 @@ async function main() {
   });
 
   const premiumType = await db.roomType.upsert({
-    where: { locationId_code: { locationId: laCeiba.id, code: "premium" } },
+    where: { locationId_code: { locationId: mainLocation.id, code: "premium" } },
     update: {},
     create: {
-      locationId: laCeiba.id,
+      locationId: mainLocation.id,
       code: "premium",
       name: "Premium Room",
       description:
@@ -175,10 +175,10 @@ async function main() {
   });
 
   const studioType = await db.roomType.upsert({
-    where: { locationId_code: { locationId: laCeiba.id, code: "studio" } },
+    where: { locationId_code: { locationId: mainLocation.id, code: "studio" } },
     update: {},
     create: {
-      locationId: laCeiba.id,
+      locationId: mainLocation.id,
       code: "studio",
       name: "Studio",
       description:
@@ -194,10 +194,10 @@ async function main() {
   });
 
   const restoreType = await db.roomType.upsert({
-    where: { locationId_code: { locationId: laCeiba.id, code: "restore" } },
+    where: { locationId_code: { locationId: mainLocation.id, code: "restore" } },
     update: {},
     create: {
-      locationId: laCeiba.id,
+      locationId: mainLocation.id,
       code: "restore",
       name: "Restore Room",
       description:
@@ -213,10 +213,10 @@ async function main() {
   });
 
   const onlineType = await db.roomType.upsert({
-    where: { locationId_code: { locationId: laCeiba.id, code: "online" } },
+    where: { locationId_code: { locationId: mainLocation.id, code: "online" } },
     update: {},
     create: {
-      locationId: laCeiba.id,
+      locationId: mainLocation.id,
       code: "online",
       name: "Online Studio",
       description:
@@ -231,14 +231,13 @@ async function main() {
     },
   });
 
-  // Movement regresa al catálogo: en la nueva ubicación (zona Lomas de
-  // Campanario Norte) ya no compite con los estudios de la antigua plaza.
-  // El upsert reactiva el tipo en bases donde se había retirado.
+  // Movement forma parte del catálogo de la sede. Si en alguna ubicación no
+  // conviene, se desactiva desde el panel: es dato, no código.
   const movementType = await db.roomType.upsert({
-    where: { locationId_code: { locationId: laCeiba.id, code: "movement" } },
+    where: { locationId_code: { locationId: mainLocation.id, code: "movement" } },
     update: { active: true },
     create: {
-      locationId: laCeiba.id,
+      locationId: mainLocation.id,
       code: "movement",
       name: "Movement Studio",
       description:
@@ -253,23 +252,23 @@ async function main() {
     },
   });
   await db.room.updateMany({
-    where: { locationId: laCeiba.id, slug: "movement-01" },
+    where: { locationId: mainLocation.id, slug: "movement-01" },
     data: { active: true },
   });
 
   // "family" fue un reemplazo provisional que nunca operó; se desactiva si
   // alguna base lo llegó a seedear.
   await db.roomType.updateMany({
-    where: { locationId: laCeiba.id, code: "family" },
+    where: { locationId: mainLocation.id, code: "family" },
     data: { active: false },
   });
   await db.room.updateMany({
-    where: { locationId: laCeiba.id, slug: "family-01" },
+    where: { locationId: mainLocation.id, slug: "family-01" },
     data: { active: false },
   });
 
   // ------------------------------------------------------------
-  // Salas de La Ceiba
+  // Salas de la sede principal
   // ------------------------------------------------------------
   const roomsData = [
     { slug: "talk-01", name: "Talk 01", typeId: talkType.id, description: "Sillones frente a frente, ventana con luz natural indirecta." },
@@ -287,10 +286,10 @@ async function main() {
   const rooms: Record<string, { id: string }> = {};
   for (const r of roomsData) {
     rooms[r.slug] = await db.room.upsert({
-      where: { locationId_slug: { locationId: laCeiba.id, slug: r.slug } },
+      where: { locationId_slug: { locationId: mainLocation.id, slug: r.slug } },
       update: {},
       create: {
-        locationId: laCeiba.id,
+        locationId: mainLocation.id,
         roomTypeId: r.typeId,
         name: r.name,
         slug: r.slug,
@@ -495,7 +494,7 @@ async function main() {
     update: { passwordHash },
     create: {
       email: "admin@thepractice.mx",
-      name: "Operación La Ceiba",
+      name: "Operación",
       passwordHash,
       role: "ADMIN",
     },
@@ -685,10 +684,10 @@ async function main() {
     // Ubicación
     await db.practitionerLocation.upsert({
       where: {
-        practitionerId_locationId: { practitionerId: profile.id, locationId: laCeiba.id },
+        practitionerId_locationId: { practitionerId: profile.id, locationId: mainLocation.id },
       },
       update: {},
-      create: { practitionerId: profile.id, locationId: laCeiba.id, isPrimary: true },
+      create: { practitionerId: profile.id, locationId: mainLocation.id, isPrimary: true },
     });
 
     // Servicios
@@ -875,7 +874,7 @@ async function main() {
           code: `TP-SEED${Math.floor(1000 + Math.random() * 9000)}`,
           kind: "ROOM_RENTAL",
           status: "CONFIRMED",
-          locationId: laCeiba.id,
+          locationId: mainLocation.id,
           roomId: rooms[b.room]!.id,
           practitionerId: practitioner.id,
           createdById: practitioner.userId,
@@ -907,7 +906,7 @@ async function main() {
         code: "TP-BLOCK1",
         kind: "ADMIN_BLOCK",
         status: "ADMIN_BLOCKED",
-        locationId: laCeiba.id,
+        locationId: mainLocation.id,
         roomId: rooms["studio-01"]!.id,
         createdById: admin.id,
         startsAt: mkDate(2, 7),
@@ -942,7 +941,7 @@ async function main() {
           wantsLocker: true,
           message: "Atiendo en un consultorio rentado en el centro y quiero moverme a una zona mejor.",
           source: "landing-la-ceiba",
-          locationId: laCeiba.id,
+          locationId: mainLocation.id,
         },
         {
           type: "PRACTITIONER_APPLICATION",
@@ -961,7 +960,7 @@ async function main() {
           interestedPlan: "premium",
           wantsLocker: true,
           source: "landing-la-ceiba",
-          locationId: laCeiba.id,
+          locationId: mainLocation.id,
           adminNotes: "Llamada agendada para el viernes 10 am. Muy interesado en horarios fijos.",
         },
         {
@@ -982,7 +981,7 @@ async function main() {
           wantsLocker: false,
           message: "Doy talleres de mindfulness para empresas, me interesa el Studio.",
           source: "landing-la-ceiba",
-          locationId: laCeiba.id,
+          locationId: mainLocation.id,
           depositCents: 200000,
           adminNotes: "Depósito founder recibido. Confirmar plan Pro + Studio los sábados.",
         },
@@ -1024,7 +1023,7 @@ async function main() {
     for (let i = 1; i <= 8; i++) {
       await db.locker.create({
         data: {
-          locationId: laCeiba.id,
+          locationId: mainLocation.id,
           number: `L${String(i).padStart(2, "0")}`,
           size: i <= 6 ? "SMALL" : "LARGE",
           monthlyPriceCents: i <= 6 ? 39000 : 59000,
@@ -1052,7 +1051,7 @@ async function main() {
   }
 
   console.log("✅ Seed completo.");
-  console.log("   Ubicaciones: La Ceiba (abierta), Juriquilla y Zibatá (próximamente)");
+  console.log("   Ubicaciones: sede principal (abierta), Juriquilla y Zibatá (próximamente)");
   console.log("   Usuarios demo (contraseña: SEED_PASSWORD / demo125):");
   console.log("   - superadmin@thepractice.mx / admin@thepractice.mx");
   console.log("   - ana@thepractice.mx (Pro) / roberto@thepractice.mx (Premium)");

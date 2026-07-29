@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import type { UserRole } from "@prisma/client";
 import { auth } from "@/lib/auth";
+import { can, type PermissionContext } from "@/lib/permissions";
 import { db } from "@/lib/db";
 
 /**
@@ -69,4 +70,55 @@ export function homeFor(role: UserRole): string {
     default:
       return "/client";
   }
+}
+
+/**
+ * Facultades finas. `requireAdmin` sigue siendo la compuerta gruesa (¿entra al
+ * panel?); esto responde la pregunta fina (¿puede esta acción concreta?).
+ *
+ * Se resuelve contra la base y no contra el JWT: un permiso revocado debe
+ * surtir efecto de inmediato, sin esperar a que la sesión se renueve.
+ */
+export async function getPermissionContext(userId: string): Promise<PermissionContext> {
+  const user = await db.user.findUnique({
+    where: { id: userId },
+    select: {
+      role: true,
+      customRole: {
+        select: { active: true, permissions: { select: { permission: true } } },
+      },
+      permissionOverrides: { select: { permission: true, allowed: true } },
+    },
+  });
+  if (!user) redirect("/");
+
+  return {
+    role: user.role,
+    rolePermissions:
+      user.customRole && user.customRole.active
+        ? user.customRole.permissions.map((p) => p.permission)
+        : null,
+    overrides: Object.fromEntries(
+      user.permissionOverrides.map((o) => [o.permission, o.allowed])
+    ),
+  };
+}
+
+/** ¿La sesión actual puede hacer esto? Para decidir qué se pinta en la UI. */
+export async function currentUserCan(permission: string): Promise<boolean> {
+  const session = await auth();
+  if (!session?.user) return false;
+  return can(await getPermissionContext(session.user.id), permission);
+}
+
+/**
+ * Exige una facultad en una server action o página. Si falta, manda al panel
+ * del rol en vez de mostrar un error: el usuario no debería ver la puerta de
+ * algo que no le toca.
+ */
+export async function requirePermission(permission: string) {
+  const session = await requireSession();
+  const ctx = await getPermissionContext(session.user.id);
+  if (!can(ctx, permission)) redirect(homeFor(session.user.role));
+  return session;
 }

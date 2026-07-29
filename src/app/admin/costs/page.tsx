@@ -1,5 +1,5 @@
 import { Receipt, TrendingDown, TrendingUp } from "lucide-react";
-import { requireAdmin } from "@/lib/auth-helpers";
+import { requirePermission } from "@/lib/auth-helpers";
 import { db } from "@/lib/db";
 import { formatMXN, formatDateMX } from "@/lib/utils";
 import { PageHeader } from "@/components/dashboard/shell";
@@ -12,6 +12,7 @@ import { Modal } from "@/components/ui/modal";
 import { ActionForm, ActionButton } from "@/components/dashboard/action-form";
 import { EmptyState } from "@/components/ui/empty-state";
 import { upsertExpense, deleteExpense } from "../actions";
+import { ReceiptsModal } from "./receipts-modal";
 import { getRevenue, getCosts, computeMargin, monthToDate } from "@/lib/metrics";
 
 export const dynamic = "force-dynamic";
@@ -49,6 +50,7 @@ function ExpenseFields({
     category: string;
     recurrence: string;
     concept: string;
+    kind: string;
     amountCents: number;
     vendor: string | null;
     notes: string | null;
@@ -88,6 +90,16 @@ function ExpenseFields({
                 {l}
               </option>
             ))}
+          </Select>
+        </Field>
+        <Field
+          label="Naturaleza"
+          htmlFor={`ex-kind-${uid}`}
+          hint="Fijo: mismo importe siempre. Variable: cambia cada periodo"
+        >
+          <Select id={`ex-kind-${uid}`} name="kind" defaultValue={expense?.kind ?? "FIXED"}>
+            <option value="FIXED">Fijo</option>
+            <option value="VARIABLE">Variable</option>
           </Select>
         </Field>
         <Field label="Recurrencia" htmlFor={`ex-rec-${uid}`}>
@@ -136,14 +148,18 @@ function ExpenseFields({
  * pendiente en vez de fingir un número.
  */
 export default async function AdminCostsPage() {
-  await requireAdmin();
+  await requirePermission("expenses.view");
   const { from, to } = monthToDate();
 
   const [expenses, locations, revenue, costos, empleados] = await Promise.all([
     db.expense.findMany({
       where: { active: true },
-      include: { location: { select: { shortName: true } } },
-      orderBy: [{ category: "asc" }, { concept: "asc" }],
+      include: {
+        location: { select: { shortName: true } },
+        createdBy: { select: { name: true } },
+        receipts: { orderBy: { createdAt: "desc" } },
+      },
+      orderBy: [{ kind: "asc" }, { category: "asc" }, { concept: "asc" }],
     }),
     db.location.findMany({
       where: { status: { not: "CLOSED" } },
@@ -217,11 +233,13 @@ export default async function AdminCostsPage() {
             <THead>
               <TR>
                 <TH>Concepto</TH>
+                <TH>Naturaleza</TH>
                 <TH>Categoría</TH>
                 <TH>Ubicación</TH>
                 <TH>Recurrencia</TH>
                 <TH>Importe</TH>
-                <TH>Fecha</TH>
+                <TH>Comprobantes</TH>
+                <TH>Registró</TH>
                 <TH />
               </TR>
             </THead>
@@ -229,6 +247,11 @@ export default async function AdminCostsPage() {
               {expenses.map((e) => (
                 <TR key={e.id}>
                   <TD className="font-display font-semibold">{e.concept}</TD>
+                  <TD>
+                    <Badge variant={e.kind === "FIXED" ? "outline" : "amber"}>
+                      {e.kind === "FIXED" ? "Fijo" : "Variable"}
+                    </Badge>
+                  </TD>
                   <TD className="text-stone-deep">{CATEGORY_LABEL[e.category] ?? e.category}</TD>
                   <TD>
                     {e.location ? (
@@ -239,8 +262,21 @@ export default async function AdminCostsPage() {
                   </TD>
                   <TD>{RECURRENCE_LABEL[e.recurrence] ?? e.recurrence}</TD>
                   <TD className="font-display font-semibold">{formatMXN(e.amountCents)}</TD>
+                  <TD>
+                    <ReceiptsModal
+                      expenseId={e.id}
+                      concept={e.concept}
+                      receipts={e.receipts.map((r) => ({
+                        id: r.id,
+                        url: r.url,
+                        filename: r.filename,
+                        createdAtLabel: formatDateMX(r.createdAt),
+                      }))}
+                    />
+                  </TD>
                   <TD className="text-xs text-stone">
-                    {e.incurredAt ? formatDateMX(e.incurredAt) : "—"}
+                    {e.createdBy?.name ?? "—"}
+                    {e.incurredAt ? ` · ${formatDateMX(e.incurredAt)}` : ""}
                   </TD>
                   <TD>
                     <div className="flex items-center gap-2">

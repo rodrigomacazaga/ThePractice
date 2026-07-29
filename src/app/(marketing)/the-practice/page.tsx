@@ -31,7 +31,7 @@ import { LocationCard } from "@/components/marketing/location-card";
 export const dynamic = "force-dynamic";
 
 // Página institucional de la marca. Vivía en "/" y se movió aquí para que la
-// raíz pueda redirigir a la landing comercial de La Ceiba sin mezclar ambas
+// raíz pueda usarse para otra cosa sin mezclar ambas
 // experiencias. Cuando "/" vuelva a ser institucional, basta con quitar la
 // redirección del middleware y restaurar este archivo como (marketing)/page.tsx.
 export const metadata: Metadata = {
@@ -157,7 +157,7 @@ export default async function ThePracticePage() {
         <div className="relative animate-fade-in">
           <FloorPlanArt className="mx-auto max-w-md lg:max-w-none" />
           <p className="mt-4 text-center font-display text-[10px] font-semibold tracking-[0.25em] text-stone-deep uppercase">
-            The Practice La Ceiba · Planta arquitectónica
+            The Practice · Planta arquitectónica
           </p>
         </div>
       </section>
@@ -474,7 +474,7 @@ export default async function ThePracticePage() {
                   key={location.id}
                   location={location}
                   roomCount={location._count.rooms}
-                  founding={location.slug === "la-ceiba"}
+                  founding={location.isFounding}
                 />
               ))}
             </div>
@@ -529,12 +529,12 @@ export default async function ThePracticePage() {
       {/* ============ CTA FINAL ============ */}
       <section className="bg-ink">
         <div className="container-page py-20 text-center lg:py-28">
-          <p className="eyebrow-light">Founding Location · The Practice La Ceiba</p>
+          <p className="eyebrow-light">Founding Location</p>
           <h2 className="mx-auto mt-4 max-w-2xl font-display text-3xl font-bold tracking-tight text-paper text-balance sm:text-4xl lg:text-5xl">
             Sé parte de la primera sede de la red.
           </h2>
           <p className="mx-auto mt-5 max-w-xl text-lg text-paper/60">
-            Cupo limitado de practitioners fundadores en La Ceiba. {site.founderClaim}
+            Cupo limitado de practitioners fundadores. {site.founderClaim}
           </p>
           <div className="mt-9 flex flex-wrap justify-center gap-3">
             <ButtonLink href="/la-ceiba" variant="light" size="xl">

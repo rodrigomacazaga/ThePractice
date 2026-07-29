@@ -38,6 +38,7 @@ export default async function LocationDetailPage({ params }: Props) {
       db.location.findUnique({
         where: { slug },
         include: {
+          landing: { select: { published: true } },
           rooms: {
             where: { active: true },
             include: { roomType: true },
@@ -100,8 +101,8 @@ export default async function LocationDetailPage({ params }: Props) {
               </p>
             </div>
             <div className="mt-9 flex flex-wrap gap-3">
-              <ButtonLink href={slug === "la-ceiba" ? "/la-ceiba" : "/apply"} variant="light" size="lg">
-                {slug === "la-ceiba" ? "Membresías founder" : "Aplicar aquí"}
+              <ButtonLink href={location.landing?.published ? `/l/${slug}` : "/apply"} variant="light" size="lg">
+                {location.landing?.published ? "Ver membresías de esta sede" : "Aplicar aquí"}
                 <ArrowRight className="h-4 w-4" />
               </ButtonLink>
               <ButtonLink href="/directory" variant="outline-light" size="lg">

@@ -51,8 +51,15 @@ model User {
   reviewedDocuments   Document[]        @relation("documentReviewer")
   incidents           Incident[]        @relation("incidentReporter")
   employee            Employee?
+  // Rol con facultades finas, por encima del enum. null = solo el enum.
+  roleId              String?
+  customRole          Role?             @relation(fields: [roleId], references: [id])
+  permissionOverrides UserPermissionOverride[]
+  expensesCreated     Expense[]         @relation("expenseAuthor")
+  receiptsUploaded    ExpenseReceipt[]  @relation("receiptUploader")
 
   @@index([role])
+  @@index([roleId])
 }
 
 // ------------------------------------------------------------
@@ -173,6 +180,9 @@ model Location {
   amenities   String[] // ["Recepción compartida", "WiFi", "Coffee station"]
   openingHour Int            @default(7) // 7:00
   closingHour Int            @default(22) // 22:00
+  /// Sede fundadora de la red. Es un atributo de la ubicación, no una regla
+  /// sobre su slug: cualquier sede puede serlo y ninguna lo es por su nombre.
+  isFounding  Boolean        @default(false)
   sort        Int            @default(0)
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt
@@ -190,6 +200,7 @@ model Location {
   demandSignals DemandSignal[]
   rateWindows   RateWindow[]
   planPrices    MembershipPlanLocationPrice[]
+  landing       LocationLanding?
 }
 
 model PractitionerLocation {
@@ -935,6 +946,13 @@ enum ExpenseRecurrence {
   YEARLY
 }
 
+/// Naturaleza del gasto, eje independiente de la recurrencia: la renta es fija
+/// y mensual; la luz es variable y mensual; una reparación es variable y única.
+enum ExpenseKind {
+  FIXED
+  VARIABLE
+}
+
 model Expense {
   id          String            @id @default(cuid())
   // null = gasto corporativo, no atribuible a una sede concreta.
@@ -942,6 +960,7 @@ model Expense {
   location    Location?         @relation(fields: [locationId], references: [id], onDelete: Cascade)
   category    ExpenseCategory
   recurrence  ExpenseRecurrence @default(MONTHLY)
+  kind        ExpenseKind       @default(FIXED)
   concept     String
   amountCents Int
   // Recurrentes: ventana de vigencia (effectiveTo null = vigente).
@@ -952,12 +971,35 @@ model Expense {
   vendor      String?
   notes       String?
   active      Boolean           @default(true)
+  // Quién lo registró: la bitácora de gastos necesita responsable.
+  createdById String?
+  createdBy   User?             @relation("expenseAuthor", fields: [createdById], references: [id])
   createdAt   DateTime          @default(now())
   updatedAt   DateTime          @updatedAt
 
+  receipts ExpenseReceipt[]
+
   @@index([locationId, active])
   @@index([category, active])
+  @@index([kind, active])
   @@index([incurredAt])
+}
+
+/// Comprobante de un gasto (factura, recibo, ticket). El archivo vive en el
+/// proveedor de storage; aquí solo la referencia y su metadata.
+model ExpenseReceipt {
+  id           String   @id @default(cuid())
+  expenseId    String
+  expense      Expense  @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+  url          String
+  filename     String
+  contentType  String?
+  sizeBytes    Int?
+  uploadedById String?
+  uploadedBy   User?    @relation("receiptUploader", fields: [uploadedById], references: [id])
+  createdAt    DateTime @default(now())
+
+  @@index([expenseId])
 }
 
 // ------------------------------------------------------------
@@ -1119,4 +1161,101 @@ model MembershipPlanLocationPrice {
 
   @@unique([planId, locationId])
   @@index([locationId, active])
+}
+
+// ------------------------------------------------------------
+// Roles y facultades (RBAC)
+// El enum UserRole sigue siendo la compuerta gruesa (dashboard que te toca);
+// estos modelos añaden facultades finas que el super admin activa o desactiva
+// desde una matriz. El catálogo de facultades vive en código
+// (src/lib/permissions.ts): así una facultad nueva no requiere migración y
+// nunca hay permisos "huérfanos" apuntando a funciones que ya no existen.
+// ------------------------------------------------------------
+
+model Role {
+  id          String   @id @default(cuid())
+  slug        String   @unique // "operaciones", "finanzas"
+  name        String
+  description String?
+  /// Los roles de sistema no se pueden borrar (evita quedarse sin acceso).
+  isSystem    Boolean  @default(false)
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  permissions RolePermission[]
+  users       User[]
+
+  @@index([active])
+}
+
+/// Una facultad concedida a un rol. `permission` es la clave del catálogo en
+/// código; guardar solo lo concedido hace que el default sea negar.
+model RolePermission {
+  id         String   @id @default(cuid())
+  roleId     String
+  role       Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission String
+  createdAt  DateTime @default(now())
+
+  @@unique([roleId, permission])
+  @@index([roleId])
+}
+
+/// Excepción para una persona concreta, por encima de su rol: permite conceder
+/// o quitar una facultad puntual sin inventar un rol nuevo.
+model UserPermissionOverride {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  permission String
+  /// true = concedida aunque el rol no la tenga; false = revocada aunque sí.
+  allowed    Boolean
+  note       String?
+  createdAt  DateTime @default(now())
+
+  @@unique([userId, permission])
+  @@index([userId])
+}
+
+// ------------------------------------------------------------
+// Contenido de landing por ubicación
+// La landing comercial es una plantilla: su contenido vive aquí, no en el
+// código, para que cualquier sede futura tenga la suya sin programar.
+// ------------------------------------------------------------
+
+model LocationLanding {
+  id         String   @id @default(cuid())
+  locationId String   @unique
+  location   Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  /// Si está apagada, la ruta pública responde 404.
+  published  Boolean  @default(false)
+
+  // Hero
+  eyebrow      String? // "Preventa Founder"
+  headline     String? // titular principal
+  subheadline  String?
+  heroImageUrl String?
+  primaryCtaLabel   String?
+  secondaryCtaLabel String?
+  supportText  String? // "Aplicación gratuita · Cupo limitado"
+
+  /// Zona o referencia de ubicación que se muestra al público (p. ej. una
+  /// colonia), separada de la dirección exacta.
+  zone String?
+
+  // Bloques de contenido variables por sede. Cada bloque es
+  // { type, title, description, items[] } — se documenta en src/lib/landing.ts
+  sections Json?
+
+  // SEO
+  metaTitle       String?
+  metaDescription String?
+  ogImageUrl      String?
+
+  /// WhatsApp de seguimiento de esta sede; si es null se usa el global.
+  whatsappPhone String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

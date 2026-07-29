@@ -11,7 +11,7 @@ export function LocationCard({
 }: {
   location: Location;
   roomCount?: number;
-  /** La Ceiba nunca es "sucursal": es la Founding Location de la red. */
+  /** La sede fundadora nunca es "sucursal": se marca desde la ubicación. */
   founding?: boolean;
 }) {
   const isOpen = location.status === "OPEN";

@@ -19,20 +19,23 @@ export function WhatsAppCta({
   variant = "outline",
   size = "md",
   className,
+  phone,
   children,
 }: {
   message: string;
   placement: string;
   className?: string;
+  /** Teléfono de la sede; si no viene se usa el global de la marca. */
+  phone?: string;
   children: React.ReactNode;
 } & VariantProps<typeof buttonVariants>) {
   // El href con parámetros de campaña se resuelve en cliente; el primer
   // render (SSR) lleva el link sin referencia para evitar hydration mismatch.
-  const [href, setHref] = useState(() => whatsappUrl(message));
+  const [href, setHref] = useState(() => whatsappUrl(message, undefined, phone));
 
   useEffect(() => {
-    setHref(whatsappUrl(message, getCampaignParams()));
-  }, [message]);
+    setHref(whatsappUrl(message, getCampaignParams(), phone));
+  }, [message, phone]);
 
   return (
     <a

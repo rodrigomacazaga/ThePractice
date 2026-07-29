@@ -20,7 +20,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     "/rooms",
     "/locations",
     "/directory",
-    "/la-ceiba",
     "/apply",
     "/about",
     "/faq",
@@ -31,11 +30,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   ].map((path) => ({
     url: `${site.url}${path}`,
     changeFrequency: "weekly" as const,
-    // "/" redirige (307) a /la-ceiba, así que la landing es la página principal.
-    priority: path === "/la-ceiba" ? 1 : path === "/the-practice" ? 0.9 : 0.7,
+    priority: path === "/the-practice" ? 1 : 0.7,
   }));
 
-  const [locations, practitioners] = await Promise.all([
+  const [locations, practitioners, landings] = await Promise.all([
     safeQuery(
       () =>
         db.location.findMany({
@@ -52,6 +50,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         }),
       []
     ),
+    // Landings comerciales publicadas: una por sede, contenido en base.
+    safeQuery(
+      () =>
+        db.locationLanding.findMany({
+          where: { published: true },
+          select: { updatedAt: true, location: { select: { slug: true } } },
+        }),
+      []
+    ),
   ]);
 
   return [
@@ -60,6 +67,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       url: `${site.url}/locations/${l.slug}`,
       changeFrequency: "weekly" as const,
       priority: 0.8,
+    })),
+    ...landings.map((l) => ({
+      url: `${site.url}/l/${l.location.slug}`,
+      lastModified: l.updatedAt,
+      changeFrequency: "weekly" as const,
+      priority: 0.9,
     })),
     ...practitioners.map((p) => ({
       url: `${site.url}/p/${p.slug}`,

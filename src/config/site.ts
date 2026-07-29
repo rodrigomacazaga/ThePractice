@@ -17,7 +17,7 @@ export const site = {
   // Claim founder legalmente cuidado — ÚNICA fuente. No usar "de por vida".
   founderClaim:
     "Conserva tu tarifa Founder mientras mantengas activa tu membresía, conforme a los términos del programa.",
-  // Roadmap de sedes (la única sede real —La Ceiba— vive en la DB).
+  // Roadmap de sedes. Las sedes reales viven en la base de datos.
   roadmapSedes: ["Juriquilla", "Centro Sur"],
 } as const;
 
@@ -46,7 +46,6 @@ export const footerNav = {
   ],
   profesionales: [
     { label: "Aplicar como practitioner", href: "/apply" },
-    { label: "Membresías founder — La Ceiba", href: "/la-ceiba" },
     { label: "Preguntas frecuentes", href: "/faq" },
   ],
   empresa: [

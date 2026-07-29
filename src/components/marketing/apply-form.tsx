@@ -257,7 +257,7 @@ export function ApplyForm({
             <option value="" disabled>
               Selecciona
             </option>
-            <option value="en-cuanto-abra">En cuanto abra La Ceiba</option>
+            <option value="en-cuanto-abra">En cuanto abra la sede</option>
             <option value="1-3-meses">En 1–3 meses</option>
             <option value="3-6-meses">En 3–6 meses</option>
             <option value="explorando">Aún estoy explorando</option>

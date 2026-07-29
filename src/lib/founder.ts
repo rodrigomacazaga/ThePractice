@@ -2,7 +2,7 @@ import { getSetting } from "@/lib/settings";
 import { db } from "@/lib/db";
 
 /**
- * Programa Founder — The Practice La Ceiba.
+ * Programa Founder de una ubicación.
  *
  * Arquitectura de la futura liga de pago (NO implementada en esta fase;
  * no se realizan cobros reales todavía):
@@ -21,8 +21,10 @@ import { db } from "@/lib/db";
  *      100% contra futuras reservas o membresías.
  */
 
-export const FOUNDER_RESERVATION_CONCEPT =
-  "Reservación de Membresía Founder — The Practice La Ceiba";
+/** Concepto del cobro. La sede se agrega al generar la liga de pago. */
+export function founderReservationConcept(locationName: string): string {
+  return `Reservación de Membresía Founder — ${locationName}`;
+}
 
 /**
  * Importe del depósito Founder en centavos, configurable desde el panel

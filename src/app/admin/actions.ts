@@ -2,7 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { requireAdmin } from "@/lib/auth-helpers";
+import { requireAdmin, requirePermission } from "@/lib/auth-helpers";
+import { isValidPermission } from "@/lib/permissions";
 import { db } from "@/lib/db";
 import { audit } from "@/lib/audit";
 import { slugify } from "@/lib/utils";
@@ -186,7 +187,7 @@ export async function updatePlanPricing(formData: FormData) {
   });
   revalidatePath("/admin/pricing");
   revalidatePath("/memberships");
-  revalidatePath("/la-ceiba");
+  revalidatePath("/l", "layout");
   return { ok: true };
 }
 
@@ -509,7 +510,7 @@ export async function upsertPlan(formData: FormData) {
   });
   revalidatePath("/admin/pricing");
   revalidatePath("/memberships");
-  revalidatePath("/la-ceiba");
+  revalidatePath("/l", "layout");
   revalidatePath("/for-practitioners");
   revalidatePath("/the-practice");
   return { ok: true };
@@ -549,7 +550,7 @@ export async function deletePlan(planId: string) {
   }
   revalidatePath("/admin/pricing");
   revalidatePath("/memberships");
-  revalidatePath("/la-ceiba");
+  revalidatePath("/l", "layout");
   revalidatePath("/for-practitioners");
   revalidatePath("/the-practice");
   return { ok: true };
@@ -612,7 +613,7 @@ export async function deleteLocation(locationId: string) {
   revalidatePath("/locations");
   revalidatePath(`/locations/${loc.slug}`);
   revalidatePath("/the-practice");
-  revalidatePath("/la-ceiba");
+  revalidatePath("/l", "layout");
   return { ok: true };
 }
 
@@ -648,7 +649,7 @@ export async function deleteRoomType(roomTypeId: string) {
   revalidatePath("/admin/locations");
   revalidatePath("/admin/rooms");
   revalidatePath("/rooms");
-  revalidatePath("/la-ceiba");
+  revalidatePath("/l", "layout");
   return { ok: true };
 }
 
@@ -682,7 +683,7 @@ export async function deleteRoom(roomId: string) {
   }
   revalidatePath("/admin/rooms");
   revalidatePath("/rooms");
-  revalidatePath("/la-ceiba");
+  revalidatePath("/l", "layout");
   return { ok: true };
 }
 
@@ -943,7 +944,7 @@ export async function upsertLocation(formData: FormData) {
   revalidatePath("/admin/locations");
   revalidatePath("/locations");
   revalidatePath("/the-practice");
-  revalidatePath("/la-ceiba");
+  revalidatePath("/l", "layout");
   return { ok: true };
 }
 
@@ -1028,7 +1029,7 @@ export async function upsertRoomType(formData: FormData) {
   revalidatePath("/admin/rooms");
   revalidatePath("/rooms");
   revalidatePath("/memberships");
-  revalidatePath("/la-ceiba");
+  revalidatePath("/l", "layout");
   revalidatePath("/the-practice");
   return { ok: true };
 }
@@ -1127,7 +1128,7 @@ export async function upsertRoom(formData: FormData) {
   });
   revalidatePath("/admin/rooms");
   revalidatePath("/rooms");
-  revalidatePath("/la-ceiba");
+  revalidatePath("/l", "layout");
   return { ok: true };
 }
 
@@ -1236,6 +1237,7 @@ export async function runJobAction(job: string) {
 const expenseSchema = z.object({
   expenseId: z.string().optional(),
   locationId: z.string().optional(), // vacío = gasto corporativo
+  kind: z.enum(["FIXED", "VARIABLE"]),
   category: z.enum([
     "RENT",
     "UTILITIES",
@@ -1258,10 +1260,11 @@ const expenseSchema = z.object({
 });
 
 export async function upsertExpense(formData: FormData) {
-  const session = await requireAdmin();
+  const session = await requirePermission("expenses.manage");
   const parsed = expenseSchema.safeParse({
     expenseId: formData.get("expenseId") || undefined,
     locationId: formData.get("locationId") || undefined,
+    kind: formData.get("kind"),
     category: formData.get("category"),
     recurrence: formData.get("recurrence"),
     concept: formData.get("concept"),
@@ -1277,6 +1280,7 @@ export async function upsertExpense(formData: FormData) {
     locationId: d.locationId ?? null,
     category: d.category,
     recurrence: d.recurrence,
+    kind: d.kind,
     concept: d.concept,
     amountCents: Math.round(d.amount * 100),
     vendor: d.vendor ?? null,
@@ -1288,7 +1292,8 @@ export async function upsertExpense(formData: FormData) {
 
   const expense = d.expenseId
     ? await db.expense.update({ where: { id: d.expenseId }, data })
-    : await db.expense.create({ data });
+    // El autor queda solo al crear: editar no cambia quién lo registró.
+    : await db.expense.create({ data: { ...data, createdById: session.user.id } });
 
   await audit({
     actorId: session.user.id,
@@ -1304,7 +1309,7 @@ export async function upsertExpense(formData: FormData) {
 }
 
 export async function deleteExpense(expenseId: string) {
-  const session = await requireAdmin();
+  const session = await requirePermission("expenses.delete");
   await db.expense.delete({ where: { id: expenseId } });
   await audit({
     actorId: session.user.id,
@@ -1589,5 +1594,186 @@ export async function deletePlanLocationPrice(id: string) {
     entityId: id,
   });
   revalidatePath("/admin/pricing");
+  return { ok: true };
+}
+
+// ============================================================
+// Roles y facultades
+// Solo quien tiene "roles.manage" puede tocar esto (el super admin siempre).
+// ============================================================
+
+const roleSchema = z.object({
+  roleId: z.string().optional(),
+  name: z.string().min(2, "Nombra el rol").max(80),
+  description: z.string().max(300).optional(),
+  active: z.coerce.boolean().optional(),
+});
+
+export async function upsertRole(formData: FormData) {
+  const session = await requirePermission("roles.manage");
+  const parsed = roleSchema.safeParse({
+    roleId: formData.get("roleId") || undefined,
+    name: formData.get("name"),
+    description: formData.get("description") || undefined,
+    active: formData.get("active") === "on",
+  });
+  if (!parsed.success) return { error: firstError(parsed.error) };
+  const d = parsed.data;
+
+  // Las facultades llegan como checkboxes; se valida cada clave contra el
+  // catálogo para no guardar permisos inventados.
+  const permissions = formData
+    .getAll("permissions")
+    .map(String)
+    .filter((p) => isValidPermission(p));
+
+  const role = d.roleId
+    ? await db.role.update({
+        where: { id: d.roleId },
+        data: { name: d.name, description: d.description ?? null, active: d.active ?? true },
+      })
+    : await db.role.create({
+        data: {
+          slug: slugify(d.name),
+          name: d.name,
+          description: d.description ?? null,
+          active: d.active ?? true,
+        },
+      });
+
+  // Se reemplaza el set completo: lo que no viene marcado queda revocado.
+  await db.$transaction([
+    db.rolePermission.deleteMany({ where: { roleId: role.id } }),
+    db.rolePermission.createMany({
+      data: permissions.map((permission) => ({ roleId: role.id, permission })),
+      skipDuplicates: true,
+    }),
+  ]);
+
+  await audit({
+    actorId: session.user.id,
+    action: d.roleId ? "role.updated" : "role.created",
+    entity: "Role",
+    entityId: role.id,
+    data: { name: d.name, permissions },
+  });
+  revalidatePath("/admin/roles");
+  return { ok: true };
+}
+
+export async function deleteRole(roleId: string) {
+  const session = await requirePermission("roles.manage");
+  const role = await db.role.findUnique({ where: { id: roleId }, select: { isSystem: true, name: true } });
+  if (!role) return { error: "El rol no existe" };
+  if (role.isSystem) return { error: "Los roles de sistema no se pueden eliminar" };
+
+  // Los usuarios que lo tenían vuelven a la línea base de su enum.
+  await db.user.updateMany({ where: { roleId }, data: { roleId: null } });
+  await db.role.delete({ where: { id: roleId } });
+
+  await audit({
+    actorId: session.user.id,
+    action: "role.deleted",
+    entity: "Role",
+    entityId: roleId,
+    data: { name: role.name },
+  });
+  revalidatePath("/admin/roles");
+  return { ok: true };
+}
+
+export async function assignRole(formData: FormData) {
+  const session = await requirePermission("roles.manage");
+  const userId = String(formData.get("userId"));
+  const roleId = String(formData.get("roleId") || "");
+
+  await db.user.update({
+    where: { id: userId },
+    data: { roleId: roleId === "" ? null : roleId },
+  });
+  await audit({
+    actorId: session.user.id,
+    action: "user.role_assigned",
+    entity: "User",
+    entityId: userId,
+    data: { roleId: roleId || null },
+  });
+  revalidatePath("/admin/roles");
+  return { ok: true };
+}
+
+/** Excepción puntual para una persona, por encima de su rol. */
+export async function setUserPermissionOverride(formData: FormData) {
+  const session = await requirePermission("roles.manage");
+  const userId = String(formData.get("userId"));
+  const permission = String(formData.get("permission"));
+  const value = String(formData.get("value")); // "allow" | "deny" | "clear"
+
+  if (!isValidPermission(permission)) return { error: "Facultad desconocida" };
+
+  if (value === "clear") {
+    await db.userPermissionOverride.deleteMany({ where: { userId, permission } });
+  } else {
+    const allowed = value === "allow";
+    await db.userPermissionOverride.upsert({
+      where: { userId_permission: { userId, permission } },
+      update: { allowed },
+      create: { userId, permission, allowed },
+    });
+  }
+
+  await audit({
+    actorId: session.user.id,
+    action: "user.permission_override",
+    entity: "User",
+    entityId: userId,
+    data: { permission, value },
+  });
+  revalidatePath("/admin/roles");
+  return { ok: true };
+}
+
+/** Comprobante de un gasto. El archivo ya está en el proveedor de storage. */
+export async function addExpenseReceipt(formData: FormData) {
+  const session = await requirePermission("expenses.manage");
+  const expenseId = String(formData.get("expenseId"));
+  const url = String(formData.get("url") || "").trim();
+  const filename = String(formData.get("filename") || "").trim() || "Comprobante";
+
+  if (!/^https?:\/\//.test(url)) {
+    return { error: "La liga del comprobante debe ser una URL válida" };
+  }
+
+  const receipt = await db.expenseReceipt.create({
+    data: {
+      expenseId,
+      url,
+      filename,
+      contentType: String(formData.get("contentType") || "") || null,
+      sizeBytes: formData.get("sizeBytes") ? Number(formData.get("sizeBytes")) : null,
+      uploadedById: session.user.id,
+    },
+  });
+  await audit({
+    actorId: session.user.id,
+    action: "expense_receipt.added",
+    entity: "ExpenseReceipt",
+    entityId: receipt.id,
+    data: { expenseId, filename },
+  });
+  revalidatePath("/admin/costs");
+  return { ok: true };
+}
+
+export async function deleteExpenseReceipt(receiptId: string) {
+  const session = await requirePermission("expenses.manage");
+  await db.expenseReceipt.delete({ where: { id: receiptId } });
+  await audit({
+    actorId: session.user.id,
+    action: "expense_receipt.deleted",
+    entity: "ExpenseReceipt",
+    entityId: receiptId,
+  });
+  revalidatePath("/admin/costs");
   return { ok: true };
 }
