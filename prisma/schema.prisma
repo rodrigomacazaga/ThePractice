@@ -50,6 +50,7 @@ model User {
   createdBookings     Booking[]         @relation("bookingCreator")
   reviewedDocuments   Document[]        @relation("documentReviewer")
   incidents           Incident[]        @relation("incidentReporter")
+  employee            Employee?
 
   @@index([role])
 }
@@ -117,6 +118,7 @@ model PractitionerProfile {
   addOns          PractitionerAddOn[]
   packagePurchases PackagePurchase[]
   leads           Lead[]                 @relation("practitionerLeads")
+  demandSignals   DemandSignal[]
 
   @@index([featured, verificationStatus])
   @@index([verificationStatus])
@@ -182,6 +184,12 @@ model Location {
   lockers       Locker[]
   incidents     Incident[]
   leads         Lead[]
+  payments      Payment[]
+  expenses      Expense[]
+  employees     Employee[]
+  demandSignals DemandSignal[]
+  rateWindows   RateWindow[]
+  planPrices    MembershipPlanLocationPrice[]
 }
 
 model PractitionerLocation {
@@ -212,7 +220,9 @@ model RoomType {
   sort                Int     @default(0)
   active              Boolean @default(true)
 
-  rooms Room[]
+  rooms         Room[]
+  rateWindows   RateWindow[]
+  demandSignals DemandSignal[]
 
   @@unique([locationId, code])
   @@index([locationId, active])
@@ -372,7 +382,8 @@ model MembershipPlan {
   sort               Int           @default(0)
   active             Boolean       @default(true)
 
-  memberships PractitionerMembership[]
+  memberships    PractitionerMembership[]
+  locationPrices MembershipPlanLocationPrice[]
 }
 
 model PractitionerMembership {
@@ -593,6 +604,11 @@ model Payment {
   description   String?
   metadata      Json?
   paidAt        DateTime?
+  // Ubicación a la que se atribuye el ingreso. Se llena en los cobros nuevos;
+  // para el histórico (y cobros sin sede clara) queda null y la atribución se
+  // deriva de la reserva o de la sede principal del practitioner.
+  locationId    String?
+  location      Location?     @relation(fields: [locationId], references: [id])
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
 
@@ -601,6 +617,7 @@ model Payment {
 
   @@index([userId, status])
   @@index([provider, providerRef])
+  @@index([locationId, status, paidAt])
 }
 
 model Coupon {
@@ -890,4 +907,216 @@ model AuditLog {
 
   @@index([entity, entityId])
   @@index([createdAt])
+}
+
+// ------------------------------------------------------------
+// Costos y rentabilidad
+// Sin gastos no hay margen: estos modelos permiten calcular
+// utilidad y punto de equilibrio por ubicación y de toda la red.
+// ------------------------------------------------------------
+
+enum ExpenseCategory {
+  RENT
+  UTILITIES // luz, agua, internet
+  PAYROLL // nómina (se alimenta también de Employee)
+  MAINTENANCE
+  CLEANING
+  SUPPLIES
+  MARKETING
+  SOFTWARE
+  INSURANCE
+  TAXES
+  OTHER
+}
+
+enum ExpenseRecurrence {
+  ONE_TIME
+  MONTHLY
+  YEARLY
+}
+
+model Expense {
+  id          String            @id @default(cuid())
+  // null = gasto corporativo, no atribuible a una sede concreta.
+  locationId  String?
+  location    Location?         @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  category    ExpenseCategory
+  recurrence  ExpenseRecurrence @default(MONTHLY)
+  concept     String
+  amountCents Int
+  // Recurrentes: ventana de vigencia (effectiveTo null = vigente).
+  // Únicos: la fecha real del gasto en incurredAt.
+  effectiveFrom DateTime        @default(now())
+  effectiveTo   DateTime?
+  incurredAt    DateTime?
+  vendor      String?
+  notes       String?
+  active      Boolean           @default(true)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  @@index([locationId, active])
+  @@index([category, active])
+  @@index([incurredAt])
+}
+
+// ------------------------------------------------------------
+// Equipo por ubicación (nómina propia de The Practice, no practitioners)
+// ------------------------------------------------------------
+
+enum EmploymentType {
+  FULL_TIME
+  PART_TIME
+  CONTRACTOR
+}
+
+enum EmployeeStatus {
+  ACTIVE
+  ON_LEAVE
+  TERMINATED
+}
+
+enum EmployeeDocumentType {
+  CONTRACT
+  ID
+  TAX_ID // RFC / constancia de situación fiscal
+  SOCIAL_SECURITY // IMSS
+  BANK_DETAILS
+  MEDICAL_CERT
+  TRAINING
+  NDA
+  OTHER
+}
+
+model Employee {
+  id                 String         @id @default(cuid())
+  locationId         String
+  location           Location       @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  // Opcional: si además tiene cuenta en la plataforma.
+  userId             String?        @unique
+  user               User?          @relation(fields: [userId], references: [id])
+  name               String
+  position           String // "Recepción", "Coordinación de operaciones"
+  email              String?
+  phone              String?
+  employmentType     EmploymentType @default(FULL_TIME)
+  status             EmployeeStatus @default(ACTIVE)
+  monthlySalaryCents Int?
+  startedAt          DateTime
+  endedAt            DateTime?
+  notes              String?
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+
+  documents EmployeeDocument[]
+
+  @@index([locationId, status])
+}
+
+model EmployeeDocument {
+  id         String               @id @default(cuid())
+  employeeId String
+  employee   Employee             @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  type       EmployeeDocumentType
+  name       String
+  url        String
+  // Vencimiento: alimenta las alertas de documentación por vencer.
+  expiresAt  DateTime?
+  status     VerificationStatus   @default(PENDING_REVIEW)
+  notes      String?
+  createdAt  DateTime             @default(now())
+  updatedAt  DateTime             @updatedAt
+
+  @@index([employeeId])
+  @@index([expiresAt])
+}
+
+// ------------------------------------------------------------
+// Demanda insatisfecha
+// Registra lo que se pidió y NO se pudo dar: es la señal más honesta
+// para decidir conversiones de sala, horarios y precios.
+// ------------------------------------------------------------
+
+enum DemandReason {
+  NO_AVAILABILITY // el tipo de sala existe pero estaba ocupado
+  NO_ROOM_TYPE // la ubicación no ofrece ese tipo de sala
+  OUTSIDE_HOURS // fuera del horario de operación
+  PRICE // desistió por precio
+}
+
+model DemandSignal {
+  id             String               @id @default(cuid())
+  locationId     String
+  location       Location             @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  roomTypeId     String?
+  roomType       RoomType?            @relation(fields: [roomTypeId], references: [id])
+  practitionerId String?
+  practitioner   PractitionerProfile? @relation(fields: [practitionerId], references: [id])
+  reason         DemandReason
+  requestedStart DateTime?
+  requestedEnd   DateTime?
+  // Desnormalizados para agrupar por franja sin recalcular en cada consulta.
+  weekday        Int? // 0 = domingo … 6 = sábado
+  hour           Int?
+  notes          String?
+  createdAt      DateTime             @default(now())
+
+  @@index([locationId, createdAt])
+  @@index([roomTypeId, reason])
+  @@index([weekday, hour])
+}
+
+// ------------------------------------------------------------
+// Flexibilidad de precios
+// ------------------------------------------------------------
+
+enum RateWindowKind {
+  PRIME // horas de mayor demanda: sobreprecio
+  OFF_PEAK // horas valle: descuento para llenar
+}
+
+/// Franja horaria con tarifa distinta. Aplica a un tipo de sala concreto o a
+/// todos los de la ubicación (roomTypeId null). El ajuste puede ser un
+/// multiplicador (multiplierBps: 12000 = 120% del precio base) o un precio
+/// fijo. Si dos franjas coinciden, gana la de mayor `priority`.
+model RateWindow {
+  id              String         @id @default(cuid())
+  locationId      String
+  location        Location       @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  roomTypeId      String?
+  roomType        RoomType?      @relation(fields: [roomTypeId], references: [id], onDelete: Cascade)
+  kind            RateWindowKind
+  label           String // "Tardes prime", "Mañanas valle"
+  weekdays        Int[] // 0 = domingo … 6 = sábado
+  startHour       Int
+  endHour         Int
+  multiplierBps   Int? // 10000 = sin cambio
+  fixedPriceCents Int?
+  creditsPerHour  Float? // permite que la franja cueste más créditos
+  priority        Int            @default(0)
+  active          Boolean        @default(true)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  @@index([locationId, active])
+  @@index([roomTypeId, active])
+}
+
+/// Precio de un plan en una ubicación concreta. Los planes son globales; esto
+/// permite que una sede tenga precio distinto sin duplicar el catálogo.
+model MembershipPlanLocationPrice {
+  id                String         @id @default(cuid())
+  planId            String
+  plan              MembershipPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  locationId        String
+  location          Location       @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  monthlyPriceCents Int
+  founderPriceCents Int?
+  includedCredits   Float?
+  active            Boolean        @default(true)
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+
+  @@unique([planId, locationId])
+  @@index([locationId, active])
 }
