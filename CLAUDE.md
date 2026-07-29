@@ -35,6 +35,19 @@ descriptivo y `git push origin main`.
 
 Antes de dar por terminado un cambio: `npm run typecheck` y `npm run build`.
 Para cambios de UI, comprobarlos en el navegador — no basta con que compile.
+Cuando el usuario reporta algo visual, **su observación es el hecho a
+explicar**: hay que reproducirla en la pantalla exacta que él describe antes
+de concluir nada.
+
+## Trampas conocidas
+
+- `backdrop-filter` (p. ej. `backdrop-blur-*`) convierte al elemento en
+  **bloque contenedor de sus descendientes `fixed`** y crea un contexto de
+  apilamiento. Un panel `fixed` dentro de un header con blur se mide contra
+  el header, no contra la ventana, y colapsa. Los overlays van en un portal
+  a `<body>` (ver `mobile-dash-nav.tsx`).
+- Un `backdrop-filter` anidado dentro de otro no desenfoca nada: si un panel
+  se apoya en ese blur para tapar el fondo, hay que darle fondo opaco.
 
 ## Restricciones
 
