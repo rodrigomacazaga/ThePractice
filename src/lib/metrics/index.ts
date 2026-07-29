@@ -9,3 +9,4 @@ export * from "./occupancy";
 export * from "./costs";
 export * from "./practitioners";
 export * from "./recommendations";
+export * from "./periods";

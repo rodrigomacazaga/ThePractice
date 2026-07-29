@@ -1,7 +1,11 @@
-import { Building2, Plus } from "lucide-react";
+import Link from "next/link";
+import Image from "next/image";
+import { ArrowRight, Building2, DoorOpen, MapPin, Plus } from "lucide-react";
 import type { Location } from "@prisma/client";
 import { requireAdmin } from "@/lib/auth-helpers";
 import { db } from "@/lib/db";
+import { formatMXN, hourLabel } from "@/lib/utils";
+import { getRevenue, getOccupancyByLocation, monthToDate } from "@/lib/metrics";
 import { PageHeader } from "@/components/dashboard/shell";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -131,76 +135,122 @@ function LocationFields({ loc }: { loc?: Location }) {
 
 export default async function AdminLocationsPage() {
   await requireAdmin();
+  const { from, to } = monthToDate();
 
-  const locations = await db.location.findMany({
-    orderBy: { sort: "asc" },
-    include: {
-      _count: { select: { rooms: true, practitioners: true, bookings: true } },
-      lockers: true,
-    },
-  });
+  const [locations, revenue, occupancy] = await Promise.all([
+    db.location.findMany({
+      orderBy: { sort: "asc" },
+      include: {
+        _count: { select: { rooms: true, practitioners: true, bookings: true } },
+        lockers: true,
+        roomTypes: { where: { active: true }, select: { name: true }, orderBy: { sort: "asc" } },
+      },
+    }),
+    getRevenue(from, to),
+    getOccupancyByLocation(from, to),
+  ]);
+
+  const occupancyById = new Map(occupancy.map((o) => [o.locationId, o]));
 
   return (
     <>
       <PageHeader
         title="Ubicaciones"
-        description="La red de The Practice. Cada ubicación tiene sus salas, lockers y configuración."
+        description="Cada sede con su inventario y su rendimiento del mes. Entra a una para ver sus finanzas, salas, equipo y recomendaciones."
       />
 
-      <div className="grid gap-5 md:grid-cols-2">
+      <div className="grid gap-6 md:grid-cols-2">
         {locations.map((loc) => {
           const lockersFree = loc.lockers.filter((l) => l.status === "AVAILABLE").length;
+          const occ = occupancyById.get(loc.id);
+          const ingreso = revenue.porUbicacion.get(loc.id)?.totalCents ?? 0;
           return (
-            <Card key={loc.id}>
-              <CardContent className="p-7">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <div className="flex items-center gap-2.5">
-                      <Building2 className="h-4.5 w-4.5 text-clay" />
-                      <h3 className="font-display text-lg font-bold">{loc.name}</h3>
+            <Card key={loc.id} className="overflow-hidden p-0">
+              {/* Fachada: puerta de entrada al dashboard de la sede */}
+              <Link href={`/admin/locations/${loc.slug}`} className="block">
+                <div className="relative aspect-[16/9] bg-paper-deep">
+                  {loc.photos[0] ? (
+                    <Image
+                      src={loc.photos[0]}
+                      alt={`Fachada de ${loc.name}`}
+                      fill
+                      sizes="(max-width: 768px) 100vw, 45vw"
+                      className="object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-full flex-col items-center justify-center gap-1.5">
+                      <Building2 className="h-7 w-7 text-stone" strokeWidth={1.5} />
+                      <span className="text-[10px] font-semibold tracking-wider text-stone uppercase">
+                        Sin fachada cargada
+                      </span>
                     </div>
-                    <p className="mt-1 text-sm text-stone-deep">
-                      {loc.city}, {loc.state} · {loc.timezone} · {loc.openingHour}:00–
-                      {loc.closingHour}:00
-                    </p>
-                  </div>
+                  )}
                   <Badge
-                    variant={
-                      loc.status === "OPEN" ? "sage" : loc.status === "PRESALE" ? "clay" : "amber"
-                    }
+                    variant={loc.status === "OPEN" ? "sage" : loc.status === "PRESALE" ? "clay" : "amber"}
+                    className="absolute top-3 right-3"
                   >
                     {STATUS_LABEL[loc.status]}
                   </Badge>
                 </div>
+              </Link>
 
-                {/* 2×2 fijo: con 4 columnas los labels largos ("Practitioners")
-                     no caben y cualquier salida (wrap, break, truncate) se ve mal. */}
-                <div className="mt-6 grid grid-cols-2 gap-3 text-center">
+              <CardContent className="p-6">
+                <Link
+                  href={`/admin/locations/${loc.slug}`}
+                  className="font-display text-lg font-bold tracking-tight hover:underline"
+                >
+                  {loc.name}
+                </Link>
+                <p className="mt-1 flex items-start gap-1.5 text-xs text-stone-deep">
+                  <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                  <span>
+                    {loc.address ? `${loc.address} · ` : ""}
+                    {loc.city}, {loc.state} · {hourLabel(loc.openingHour)}–{hourLabel(loc.closingHour)}
+                  </span>
+                </p>
+
+                {/* Las salas que la componen */}
+                <div className="mt-4 flex flex-wrap gap-1.5">
+                  <Badge variant="outline">
+                    <DoorOpen className="h-3 w-3" />
+                    {loc._count.rooms} salas
+                  </Badge>
+                  {loc.roomTypes.slice(0, 4).map((rt) => (
+                    <Badge key={rt.name} variant="default">
+                      {rt.name}
+                    </Badge>
+                  ))}
+                  {loc.roomTypes.length > 4 && (
+                    <Badge variant="outline">+{loc.roomTypes.length - 4}</Badge>
+                  )}
+                </div>
+
+                {/* Rendimiento del mes: comparable entre sedes */}
+                <div className="mt-5 grid grid-cols-4 gap-2 border-t border-line pt-4 text-center">
                   {[
-                    { label: "Salas", value: loc._count.rooms },
+                    { label: "Ingreso", value: formatMXN(ingreso) },
+                    { label: "Ocupación", value: `${occ?.ocupacionPct ?? 0}%` },
                     { label: "Practitioners", value: loc._count.practitioners },
-                    { label: "Reservas", value: loc._count.bookings },
-                    {
-                      label: "Lockers libres",
-                      value: `${lockersFree}/${loc.lockers.length}`,
-                    },
+                    { label: "Lockers", value: `${lockersFree}/${loc.lockers.length}` },
                   ].map((s) => (
-                    <div key={s.label} className="rounded-xl bg-paper px-2 py-3">
-                      <p className="font-display text-lg font-bold">{s.value}</p>
-                      <p className="text-[10px] font-semibold tracking-wider whitespace-nowrap text-stone-deep uppercase">
+                    <div key={s.label} className="rounded-xl bg-paper px-1.5 py-2.5">
+                      <p className="font-display text-sm font-bold">{s.value}</p>
+                      <p className="text-[9px] font-semibold tracking-wider whitespace-nowrap text-stone-deep uppercase">
                         {s.label}
                       </p>
                     </div>
                   ))}
                 </div>
 
-                <p className="mt-4 text-xs text-stone-deep">
-                  slug: <span className="font-mono">/locations/{loc.slug}</span> (fijo — es URL
-                  pública)
-                </p>
-
-                <div className="mt-4 flex items-center gap-3 border-t border-line pt-4">
-                  <Modal trigger="Editar ubicación" title={`Editar ${loc.shortName}`}>
+                <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-line pt-4">
+                  <Link
+                    href={`/admin/locations/${loc.slug}`}
+                    className="inline-flex items-center gap-1.5 font-display text-xs font-semibold text-ink hover:underline"
+                  >
+                    Ver dashboard de la sede
+                    <ArrowRight className="h-3.5 w-3.5" />
+                  </Link>
+                  <Modal trigger="Editar" title={`Editar ${loc.shortName}`}>
                     <ActionForm action={upsertLocation} submitLabel="Guardar cambios">
                       <LocationFields loc={loc} />
                     </ActionForm>

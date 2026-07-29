@@ -23,7 +23,7 @@ const SECTIONS: DashNavSection[] = [
   {
     title: "Negocio",
     items: [
-      { href: "/admin/catalog", label: "Planes y precios", icon: "tags" },
+      { href: "/admin/pricing", label: "Planes y precios", icon: "tags" },
       { href: "/admin/payments", label: "Pagos", icon: "credit-card" },
       { href: "/admin/settings", label: "Configuración", icon: "settings" },
     ],

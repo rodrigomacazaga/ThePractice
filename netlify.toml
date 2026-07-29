@@ -10,7 +10,11 @@
   # sincronizar catálogo o contraseñas demo (`npm run db:seed`, con
   # SEED_PASSWORD definida). scripts/verify-login.mjs queda disponible para
   # comprobar credenciales contra la base sin exponer nada.
-  command = "npm run build"
+  # TEMPORAL: `prisma db push` aplica a la base las tablas nuevas (gastos,
+  # empleados, demanda, franjas de tarifa, overrides de plan) que las vistas
+  # nuevas consultan. Todos los cambios son aditivos, así que no hay pérdida
+  # de datos. Revertir a "npm run build" una vez aplicado.
+  command = "npm run build && npx prisma db push --skip-generate"
   publish = ".next"
 
 # OJO: no fijar NODE_ENV=production aquí — haría que npm omita las

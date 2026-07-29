@@ -17,6 +17,21 @@ import { PageHeader } from "@/components/dashboard/shell";
 import { Stat } from "@/components/ui/stat";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Table, THead, TBody, TR, TH, TD } from "@/components/ui/table";
+import { RecommendationList } from "../locations/recommendation-list";
+import {
+  getRevenue,
+  getMrrByLocation,
+  getOccupancyByLocation,
+  getRoomTypePerformance,
+  getCosts,
+  computeMargin,
+  getCreditLiability,
+  recommendCreditActions,
+  recommendFromDemand,
+  sortRecommendations,
+  monthToDate,
+} from "@/lib/metrics";
 
 export const dynamic = "force-dynamic";
 
@@ -98,6 +113,39 @@ export default async function AdminOverviewPage() {
     }),
     db.membershipPlan.findMany({ where: { active: true } }),
   ]);
+
+  // Métricas de negocio del mes en curso (ver src/lib/metrics).
+  const { from: mesFrom, to: mesTo } = monthToDate(now);
+  const [
+    revenue,
+    mrrByLocation,
+    occupancyPorSede,
+    roomTypePerf,
+    costosRed,
+    creditos,
+    demandRecs,
+    locations,
+  ] = await Promise.all([
+    getRevenue(mesFrom, mesTo),
+    getMrrByLocation(),
+    getOccupancyByLocation(mesFrom, mesTo),
+    getRoomTypePerformance(mesFrom, mesTo),
+    getCosts(mesFrom, mesTo),
+    getCreditLiability(),
+    recommendFromDemand(),
+    db.location.findMany({
+      where: { status: { not: "CLOSED" } },
+      select: { id: true, slug: true, shortName: true, status: true },
+      orderBy: { sort: "asc" },
+    }),
+  ]);
+
+  const margenRed = computeMargin(revenue.total.totalCents, costosRed.totalCents);
+  const recomendaciones = sortRecommendations([
+    ...recommendCreditActions(creditos),
+    ...demandRecs,
+  ]);
+  const occById = new Map(occupancyPorSede.map((o) => [o.locationId, o]));
 
   // MRR actual: suma de precios de membresías activas (founder o regular)
   const mrr = activeMemberships.reduce(
@@ -198,6 +246,145 @@ export default async function AdminOverviewPage() {
           icon={UserRound}
         />
       </div>
+
+      {/* MARGEN Y PASIVO DE CRÉDITOS */}
+      <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <Stat
+          label="Ingreso atribuido"
+          value={formatMXN(revenue.total.totalCents)}
+          sub={
+            revenue.sinAtribuir.totalCents > 0
+              ? `${formatMXN(revenue.sinAtribuir.totalCents)} sin sede identificada`
+              : "Todo atribuido a una sede"
+          }
+          icon={BadgeDollarSign}
+        />
+        <Stat
+          label="Costos del mes"
+          value={costosRed.totalCents === 0 ? "—" : formatMXN(costosRed.totalCents)}
+          sub={costosRed.totalCents === 0 ? "Captura gastos para ver margen" : `Nómina: ${formatMXN(costosRed.nominaCents)}`}
+        />
+        <Stat
+          label="Margen de la red"
+          value={costosRed.totalCents === 0 ? "—" : formatMXN(margenRed.margenCents)}
+          sub={costosRed.totalCents === 0 ? "Sin gastos capturados" : `${margenRed.margenPct}% del ingreso`}
+          icon={TrendingUp}
+        />
+        <Stat
+          label="Créditos por consumir"
+          value={formatCredits(creditos.creditosVigentes)}
+          sub={
+            creditos.creditosPorVencer30d > 0
+              ? `${formatCredits(creditos.creditosPorVencer30d)} vencen en 30 días`
+              : `≈ ${formatMXN(creditos.valorEstimadoCents)} comprometidos`
+          }
+        />
+      </div>
+
+      {/* RECOMENDACIONES DE NEGOCIO */}
+      {recomendaciones.length > 0 && (
+        <section className="mt-8">
+          <h2 className="eyebrow">Qué conviene revisar</h2>
+          <RecommendationList items={recomendaciones} className="mt-4" />
+        </section>
+      )}
+
+      {/* COMPARATIVA POR UBICACIÓN */}
+      {locations.length > 0 && (
+        <section className="mt-8">
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <h2 className="eyebrow">Rendimiento por ubicación</h2>
+            <Link
+              href="/admin/locations"
+              className="flex items-center gap-1 font-display text-xs font-semibold text-stone-deep hover:text-ink"
+            >
+              Ver ubicaciones <ArrowRight className="h-3.5 w-3.5" />
+            </Link>
+          </div>
+          <Card className="mt-4 overflow-x-auto">
+            <Table>
+              <THead>
+                <TR>
+                  <TH>Sede</TH>
+                  <TH>Ingreso</TH>
+                  <TH>MRR</TH>
+                  <TH>Ocupación</TH>
+                  <TH>Por hora-sala</TH>
+                  <TH>Salas</TH>
+                </TR>
+              </THead>
+              <TBody>
+                {locations.map((loc) => {
+                  const occ = occById.get(loc.id);
+                  return (
+                    <TR key={loc.id}>
+                      <TD>
+                        <Link
+                          href={`/admin/locations/${loc.slug}`}
+                          className="font-display font-semibold hover:underline"
+                        >
+                          {loc.shortName}
+                        </Link>
+                      </TD>
+                      <TD>{formatMXN(revenue.porUbicacion.get(loc.id)?.totalCents ?? 0)}</TD>
+                      <TD>{formatMXN(mrrByLocation.porUbicacion.get(loc.id) ?? 0)}</TD>
+                      <TD>
+                        <Badge
+                          variant={
+                            (occ?.ocupacionPct ?? 0) >= 70
+                              ? "sage"
+                              : (occ?.ocupacionPct ?? 0) <= 25
+                                ? "rust"
+                                : "amber"
+                          }
+                        >
+                          {occ?.ocupacionPct ?? 0}%
+                        </Badge>
+                      </TD>
+                      <TD className="font-display font-semibold">{formatMXN(occ?.revpahCents ?? 0)}</TD>
+                      <TD>{occ?.salasActivas ?? 0}</TD>
+                    </TR>
+                  );
+                })}
+              </TBody>
+            </Table>
+          </Card>
+          <p className="mt-2 text-xs text-stone">
+            “Por hora-sala” es el ingreso dividido entre las horas-sala disponibles (RevPAH):
+            permite comparar sedes de distinto tamaño.
+          </p>
+        </section>
+      )}
+
+      {/* RENDIMIENTO POR TIPO DE SALA */}
+      {roomTypePerf.length > 0 && (
+        <section className="mt-8">
+          <h2 className="eyebrow">Rendimiento por tipo de sala</h2>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            {[...roomTypePerf]
+              .sort((a, b) => b.revpahCents - a.revpahCents)
+              .map((rt) => (
+                <div key={rt.roomTypeId} className="rounded-2xl border border-line bg-surface p-5">
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="font-display text-sm font-bold">{rt.name}</p>
+                    <Badge
+                      variant={
+                        rt.ocupacionPct >= 70 ? "sage" : rt.ocupacionPct <= 25 ? "rust" : "amber"
+                      }
+                    >
+                      {rt.ocupacionPct}%
+                    </Badge>
+                  </div>
+                  <p className="mt-2 font-display text-lg font-bold">{formatMXN(rt.ingresoCents)}</p>
+                  <p className="text-xs text-stone-deep">
+                    {rt.salas} sala{rt.salas === 1 ? "" : "s"} · {rt.horasReservadas} h ·{" "}
+                    {formatMXN(rt.revpahCents)}/h-sala
+                  </p>
+                </div>
+              ))}
+          </div>
+        </section>
+      )}
 
       <div className="mt-8 grid gap-8 xl:grid-cols-[1.2fr_0.8fr]">
         {/* RESERVAS DE HOY */}
@@ -328,7 +515,7 @@ export default async function AdminOverviewPage() {
       <div className="mt-8 grid gap-4 sm:grid-cols-3">
         {[
           { href: "/admin/practitioners", icon: UserRound, label: "Verificar practitioners" },
-          { href: "/admin/catalog", icon: Crown, label: "Planes y precios" },
+          { href: "/admin/pricing", icon: Crown, label: "Planes y precios" },
           { href: "/admin/bookings", icon: DoorOpen, label: "Bloquear horarios" },
         ].map((l) => (
           <Link

@@ -184,7 +184,7 @@ export async function updatePlanPricing(formData: FormData) {
     entityId: parsed.data.planId,
     data: parsed.data,
   });
-  revalidatePath("/admin/catalog");
+  revalidatePath("/admin/pricing");
   revalidatePath("/memberships");
   revalidatePath("/la-ceiba");
   return { ok: true };
@@ -223,7 +223,8 @@ export async function updateRoomTypePricing(formData: FormData) {
     entityId: parsed.data.roomTypeId,
     data: parsed.data,
   });
-  revalidatePath("/admin/catalog");
+  revalidatePath("/admin/pricing");
+  revalidatePath("/admin/locations");
   revalidatePath("/rooms");
   revalidatePath("/memberships");
   return { ok: true };
@@ -506,7 +507,7 @@ export async function upsertPlan(formData: FormData) {
     entityId: id,
     data: { name: data.name },
   });
-  revalidatePath("/admin/catalog");
+  revalidatePath("/admin/pricing");
   revalidatePath("/memberships");
   revalidatePath("/la-ceiba");
   revalidatePath("/for-practitioners");
@@ -546,7 +547,7 @@ export async function deletePlan(planId: string) {
       data: { name: plan.name },
     });
   }
-  revalidatePath("/admin/catalog");
+  revalidatePath("/admin/pricing");
   revalidatePath("/memberships");
   revalidatePath("/la-ceiba");
   revalidatePath("/for-practitioners");
@@ -643,7 +644,8 @@ export async function deleteRoomType(roomTypeId: string) {
       data: { name: rt.name },
     });
   }
-  revalidatePath("/admin/catalog");
+  revalidatePath("/admin/pricing");
+  revalidatePath("/admin/locations");
   revalidatePath("/admin/rooms");
   revalidatePath("/rooms");
   revalidatePath("/la-ceiba");
@@ -712,7 +714,7 @@ export async function deleteHourPackage(packageId: string) {
       data: { name: pkg.name },
     });
   }
-  revalidatePath("/admin/catalog");
+  revalidatePath("/admin/pricing");
   revalidatePath("/memberships");
   return { ok: true };
 }
@@ -745,7 +747,7 @@ export async function deleteAddOn(addOnId: string) {
       data: { name: addon.name },
     });
   }
-  revalidatePath("/admin/catalog");
+  revalidatePath("/admin/pricing");
   revalidatePath("/memberships");
   return { ok: true };
 }
@@ -795,7 +797,7 @@ export async function upsertHourPackage(formData: FormData) {
     entityId: id,
     data: { name: data.name },
   });
-  revalidatePath("/admin/catalog");
+  revalidatePath("/admin/pricing");
   revalidatePath("/memberships");
   return { ok: true };
 }
@@ -858,7 +860,7 @@ export async function upsertAddOn(formData: FormData) {
     entityId: id,
     data: { name: data.name },
   });
-  revalidatePath("/admin/catalog");
+  revalidatePath("/admin/pricing");
   revalidatePath("/memberships");
   return { ok: true };
 }
@@ -1021,7 +1023,8 @@ export async function upsertRoomType(formData: FormData) {
     entityId: id,
     data: { name: data.name },
   });
-  revalidatePath("/admin/catalog");
+  revalidatePath("/admin/pricing");
+  revalidatePath("/admin/locations");
   revalidatePath("/admin/rooms");
   revalidatePath("/rooms");
   revalidatePath("/memberships");
